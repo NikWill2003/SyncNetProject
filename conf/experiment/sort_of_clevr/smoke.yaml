@@ -1,0 +1,28 @@
+
+# @package _global_
+# End-to-end pipeline check in seconds.
+#
+# Prepare and run:
+#   python prepare_dataset.py task=sort_of_clevr dataset=sort_of_clevr/smoke
+#   python main.py task=sort_of_clevr experiment=sort_of_clevr/smoke
+#   python main.py task=sort_of_clevr experiment=sort_of_clevr/smoke \
+#       model=sort_of_clevr/transformer model/encoder=cnn
+defaults:
+  - override /dataset: sort_of_clevr/smoke
+
+train:
+  n_steps: 20
+  train_bs: 32
+  val_bs: 64
+
+logging:
+  eval_log_interval: 10
+  train_log_interval: 10
+
+model:
+  encoder_cfg:
+    ch: 32
+
+wandb:
+  enabled: false
+  tags: [smoke]

@@ -1,0 +1,32 @@
+defaults:
+  - coalitions_base
+  - _self_
+
+# N=6 catalogue: gives a graded rho ladder (stars K1,3..K1,5 and K2,3/K3,3).
+name: coalitions
+seed: 1
+root: ./data
+dir: coalitions_n6_${dataset.family}
+
+n_modules: 6
+K: 4
+family: all
+increments: [1, 2, 3]
+stream_mode: iid
+
+train_size: 30000
+test_size: 3000
+T_train: 40
+T_test: 40
+
+episodes_min: 1
+episodes_max: 3
+window_min: 5
+window_max: 10
+post_steps: 2
+
+command_mode: sparse
+readout_mode: instant
+readout_lag_max: 3
+
+rho_dims: [2, 3, 4, 6]

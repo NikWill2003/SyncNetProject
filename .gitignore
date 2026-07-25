@@ -1,0 +1,8 @@
+/outputs/
+/.vscode/
+/multirun/
+/wandb/
+__pycache__/
+/data/
+debug.log
+TODO.md

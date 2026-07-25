@@ -1,0 +1,16 @@
+# @package dataset
+# Tiny dataset for smoke tests. Separate dir so it never clobbers the real data.
+defaults:
+  - sort_of_clevr_base
+  - _self_
+
+name: sort_of_clevr
+seed: 1
+root: ./data
+dir: sort-of-clevr-smoke
+train_size: 20
+test_size: 10
+img_size: 75
+obj_size: 5
+nb_questions: 10
+t_subtype: -1

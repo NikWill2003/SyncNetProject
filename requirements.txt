@@ -1,0 +1,15 @@
+numpy
+pandas
+
+torch
+accelerate
+
+matplotlib
+plotly
+opencv-python
+
+ipykernel
+jupyter
+
+wandb
+hydra-core

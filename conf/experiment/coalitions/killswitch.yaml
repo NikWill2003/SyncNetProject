@@ -1,0 +1,35 @@
+
+# @package _global_
+# Minimal frustration kill-switch (N=4).
+#
+# Prepare once, then sweep gate x family x seed:
+#   python prepare_dataset.py task=coalitions dataset.family=all
+#   python main.py -m task=coalitions experiment=coalitions/killswitch \
+#       model=coalitions/phase,coalitions/mlp,coalitions/recurrent,coalitions/oracle,coalitions/nocomm \
+#       dataset.family=clusterable,frustrated train.seed=0,1,2,3,4
+defaults:
+  - override /dataset: coalitions/default
+  - override /model: coalitions/phase
+
+# The directory remains keyed by the prepared family bundle.
+dataset:
+  n_modules: 4
+  family: all
+  command_mode: sparse
+  readout_mode: instant
+
+train:
+  n_steps: 4000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_metric: accuracy
+  early_stop_big_is_better: true
+
+logging:
+  eval_log_interval: 200
+  train_log_interval: 200
+  info_metrics: [loss, accuracy, acc_joint, gate_auc, offpair_leak]
+
+wandb:
+  project_name: coalitions
+  tags: [killswitch, n4]

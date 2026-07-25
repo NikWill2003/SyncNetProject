@@ -1,0 +1,14 @@
+
+defaults:
+  - config_schema
+  - task: sort_of_clevr
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+  - _self_
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
