@@ -1,0 +1,27 @@
+defaults:
+  - coalitions_base
+  - _self_
+
+# Scalar-phase gate, AKOrN-style Kuramoto update
+name: coalitions
+forward_args: {}
+
+gate: phase
+
+# shared backbone
+tok_dim: 32
+cmd_dim: 16
+hidden_dim: 64
+msg_dim: 32
+head_hidden: 0
+message_proj: shared   # gate is the sole routing bottleneck (per_pair = ablation)
+
+# phase gate
+osc_dim: 2
+phase_update: kuramoto
+alpha_init: 4.0
+bias_init: -1.0
+learn_sharpen: true
+dt: 0.25
+phi_hidden: 64
+kappa_max: 2.0

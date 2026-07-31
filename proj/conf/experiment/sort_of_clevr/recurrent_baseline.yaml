@@ -1,0 +1,35 @@
+# @package _global_
+# RecurrentSyncNet (phase-as-module-state) baseline.
+#
+# Single run:
+#   python main.py task=sort_of_clevr experiment=sort_of_clevr/recurrent_baseline
+#
+# Seeded comparison vs V3 (scaffolding control) and V1:
+#   python main.py -m task=sort_of_clevr experiment=sort_of_clevr/recurrent_baseline \
+#       model=sort_of_clevr/recurrent_syncnet,sort_of_clevr/syncnet_v3,sort_of_clevr/syncnet_v1 \
+#       train.seed=0,1,2
+#
+# Dynamics-relevance sweep (does phase-gating matter at all?):
+#   python main.py -m task=sort_of_clevr experiment=sort_of_clevr/recurrent_baseline \
+#       model.dt=0.0,0.1 train.seed=0,1,2
+#   (dt=0 freezes the phases at their random init: gates become fixed
+#    random masks, isolating the contribution of phase *dynamics*.)
+defaults:
+  - override /model: sort_of_clevr/recurrent_syncnet
+  - override /callbacks: sort_of_clevr/recurrent
+
+train:
+  n_steps: 20000
+  early_stop_patience: 12
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 100
+  save_best: true
+  info_metrics: [loss, accuracy, phase_R, gate_offdiag]
+
+wandb:
+  enabled: true
+  entity: niks_priv
+  group: recurrent_syncnet_v0
+  tags: [recurrent_syncnet, t_variance]

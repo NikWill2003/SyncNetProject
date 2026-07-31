@@ -1,0 +1,22 @@
+
+defaults:
+  - config_schema
+  - task: sort_of_clevr
+  - _self_
+
+# base will override teh task config here
+
+train:
+  seed: 0
+  n_steps: 1000
+  train_bs: 256
+  val_bs: 1024
+  loader_mode: gpu_cached
+  mixed_precision: 'no'
+
+logging:
+  train_log_interval: 5
+
+wandb:
+  enabled: true
+
