@@ -1,8 +1,0 @@
-# @package model.encoder_cfg
-defaults:
-  - patchify_encoder_base
-  - _self_
-
-name: patchify
-ch: 128
-patch_size: 5

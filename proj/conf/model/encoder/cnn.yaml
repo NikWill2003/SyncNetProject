@@ -1,6 +1,0 @@
-# @package model.encoder_cfg
-defaults:
-  - cnn_encoder_base
-
-ch: 128
-hidden: 64

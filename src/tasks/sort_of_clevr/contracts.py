@@ -13,4 +13,5 @@ class SortOfClevrBatch(TypedDict):
 
 class SortOfClevrOutput(TypedDict):
     logits: Tensor 
-    traces: NotRequired[dict]         
+    traces: NotRequired[dict]
+    metrics: NotRequired[dict]  # scalar diagnostics, sectioned under model/ by the trainer

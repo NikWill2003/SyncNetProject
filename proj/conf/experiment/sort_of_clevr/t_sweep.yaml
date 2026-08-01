@@ -1,4 +1,0 @@
-# @package _global_
-wandb:
-  group: t_sweep
-  tags: [t_sweep]
