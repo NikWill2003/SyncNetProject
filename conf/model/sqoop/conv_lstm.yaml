@@ -1,0 +1,9 @@
+defaults:
+  - sqoop_conv_lstm_base
+  - encoder: cnn
+  - _self_
+
+name: sqoop_conv_lstm
+emb_dim: 32
+lstm_hidden: 128
+hidden_dim: 256

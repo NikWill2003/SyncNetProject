@@ -1,0 +1,44 @@
+# @package _global_
+defaults:
+  - /dataset: sqoop/default
+  - /model: sqoop/recurrent_syncnet
+  - /callbacks: sqoop/default
+  - _self_
+
+train:
+  n_steps: 20000
+  train_bs: 64
+  val_bs: 512
+
+  early_stop_metric: loss
+  early_stop_big_is_better: false
+  early_stop_patience: 10
+  early_stop_min_delta: 0.0
+
+  loader_mode: gpu_cached
+  mixed_precision: 'no'
+  compile_model: false
+  grad_accum: 1
+  grad_clip: 1.0
+  num_workers: 0
+
+optim:
+  optimiser: adamw
+  lr: 3e-4
+  weight_decay: 0.0
+  lr_scheduler: cosine_annealing
+  lr_scheduler_params: {}
+
+logging:
+  train_log_interval: 100
+  eval_log_interval: 500
+  info_metrics: [loss, accuracy]
+  save_best: false
+
+wandb:
+  enabled: true
+  project_name: sqoop
+  entity: niks_priv
+  group: null
+  run_name: null
+  tags: []

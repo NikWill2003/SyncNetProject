@@ -1,0 +1,9 @@
+defaults:
+  - sqoop_syncnet_v1_base
+  - encoder: patchify
+  - _self_
+
+name: sqoop_syncnet_v1
+emb_dim: 32
+encoder_cfg:
+  patch_size: 8   # 64 px / 8 = 8x8 = 64 tokens

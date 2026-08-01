@@ -1,0 +1,24 @@
+defaults:
+  - sqoop_base
+  - _self_
+
+name: sqoop
+seed: 1
+root: ./data
+# dir tracks rhs so every #rhs variant is its own dataset on disk
+dir: sqoop-rhs${dataset.rhs_variety}
+
+rhs_variety: 18
+num_repeats: 80          # train examples = 36 * rhs * num_repeats
+num_repeats_eval: 10
+max_train_pairs: 0
+
+eval_split: val_seen     # early stopping must not peek at unseen pairs
+test_split: test_unseen
+
+max_train_examples: 0
+
+img_size: 64
+num_objects: 5
+min_obj_size: 10
+max_obj_size: 15

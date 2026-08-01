@@ -1,0 +1,34 @@
+# @package _global_
+# SQOOP compositional-generalisation baseline: 100k steps, best-weights
+# checkpointing, end-of-run test-time T ablation on test_unseen.
+#
+# Single run:
+#   python main.py task=sqoop experiment=sqoop/baseline_100k
+#
+# The #rhs curve (the reason SQOOP exists):
+#   python main.py -m task=sqoop experiment=sqoop/baseline_100k \
+#       dataset.rhs_variety=1,2,4,8,18 train.seed=0,1,2
+#
+# Model comparison at fixed rhs:
+#   python main.py -m task=sqoop experiment=sqoop/baseline_100k \
+#       model=sqoop/recurrent_syncnet,sqoop/syncnet_v3,sqoop/conv_lstm \
+#       dataset.rhs_variety=1 train.seed=0,1,2
+defaults:
+  - override /model: sqoop/recurrent_syncnet
+  - override /callbacks: sqoop/full
+
+train:
+  n_steps: 100000
+  early_stop_patience: 20
+
+logging:
+  eval_log_interval: 1000
+  train_log_interval: 200
+  save_best: true
+  info_metrics: [loss, accuracy]
+
+wandb:
+  enabled: true
+  entity: niks_priv
+  group: sqoop_baseline
+  tags: [sqoop, t_variance]
