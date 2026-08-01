@@ -25,6 +25,18 @@ guard () {
 R="experiment=sort_of_clevr/recurrent_baseline"
 T="task=sort_of_clevr"
 
+# ---------------------------------------------------------------- P0
+# Dataset preparation (idempotent: skipped if the npz files already exist).
+# Fails hard if prepare fails -- no point queueing 41 h of runs without data.
+if [ ! -f data/sort-of-clevr/train.npz ]; then
+  echo "[queue] preparing sort_of_clevr dataset..."
+  python prepare_dataset.py task=sort_of_clevr || {
+    echo "[queue] FATAL: dataset preparation failed"; exit 1; }
+else
+  echo "[queue] dataset found at data/sort-of-clevr, skipping prepare"
+fi
+
+
 # ---------------------------------------------------------------- P1 (15)
 # Headline: recurrent vs v3 vs v1, 5 seeds. Everything downstream cites this.
 guard 15 "headline_3way" && \
