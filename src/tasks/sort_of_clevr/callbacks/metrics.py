@@ -25,12 +25,9 @@ class QtypeAccuracyCallbackCfg(CallbackConfig):
     name: str = 'qtype_accuracy'
 
 
-# TODO:
-# - what metrics should i add to this?
-# - accuracy across question type?
-# - accuracy across question subtype?
-# - 
-
+@dataclass
+class SubtypeAccuracyCallbackCfg(CallbackConfig):
+    name: str = 'subtype_accuracy'
 
 def sort_of_clevr_accuracy(
         logits: Tensor, answers: Tensor
@@ -64,6 +61,21 @@ def sort_of_clevr_qtype_accuracy(
             'binary_accuracy': accuracy(logits[binary_idx], answers[binary_idx]),
             'ternary_accuracy': accuracy(logits[ternary_idx], answers[ternary_idx])
         }
+
+
+def sort_of_clevr_subtype_accuracy(
+        logits: Tensor, answers: Tensor, questions: Tensor,
+        ) -> dict[str, float]:
+
+        out: dict[str, float] = {}
+        for (kind, subtype), name in C.SUBTYPE_NAMES.items():
+            type_idx = C.Q_TYPE_IDX + C.Q_TYPES_OFFSET[kind]
+            sub_idx = C.SUB_Q_TYPE_IDX + subtype
+
+            mask = (questions[:, type_idx] == 1) & (questions[:, sub_idx] == 1)
+            out[f'{name}_accuracy'] = accuracy(logits[mask], answers[mask])
+
+        return out
 
 
 class sort_of_clevr_accuracy_callback(BaseCallBack):
@@ -127,6 +139,40 @@ class sort_of_clevr_qtype_accuracy_callback(BaseCallBack):
         return cls()
     
         
+class sort_of_clevr_subtype_accuracy_callback(BaseCallBack):
+
+    def on_train_step_end(
+            self, trainer, out: SortOfClevrOutput, batch: SortOfClevrBatch
+            ) -> Optional[dict[str, float]]:
+
+        return sort_of_clevr_subtype_accuracy(
+            out['logits'], batch['answers'], batch['questions']
+        )
+
+    def on_eval_step_end(
+            self, trainer, out: SortOfClevrOutput, batch: SortOfClevrBatch
+            ) -> Optional[dict[str, float]]:
+
+        return sort_of_clevr_subtype_accuracy(
+            out['logits'], batch['answers'], batch['questions']
+        )
+
+    def on_test_step_end(
+            self, trainer, out: SortOfClevrOutput, batch: SortOfClevrBatch
+            ) -> Optional[dict[str, float]]:
+
+        return sort_of_clevr_subtype_accuracy(
+            out['logits'], batch['answers'], batch['questions']
+        )
+
+    @classmethod
+    def from_config(
+        cls, cfg: Config, cb_cfg: SubtypeAccuracyCallbackCfg
+        ) -> sort_of_clevr_subtype_accuracy_callback:
+
+        return cls()
+
+
 sort_of_clevr_metric_callbacks: dict[str, CallbackSpec] = {
     'accuracy': CallbackSpec(
         config=AccuracyCallbackCfg,
@@ -135,5 +181,9 @@ sort_of_clevr_metric_callbacks: dict[str, CallbackSpec] = {
     'qtype_accuracy': CallbackSpec(
         config=QtypeAccuracyCallbackCfg,
         callback_class=sort_of_clevr_qtype_accuracy_callback,
+    ),
+    'subtype_accuracy': CallbackSpec(
+        config=SubtypeAccuracyCallbackCfg,
+        callback_class=sort_of_clevr_subtype_accuracy_callback,
     ),
 }

@@ -1,13 +1,23 @@
 defaults:
   - sort_of_clevr_transformer_base
-  - encoder: patchify
   - _self_
 
 name: sort_of_clevr_transformer
-forward_args: {}
+
+# patch encoder only:
+patch_emb_dim: 128
+patch_size: 5
 
 hidden_dim: 128
 n_heads: 4
 n_layers: 2
 ffn_mult: 2
 dropout: 0.0
+
+# positional encoding
+pos_enc: learnt_2d # learnt_1d | learnt_2d
+
+# where the question enters
+q_conditioning: token # token | broadcast_cat | film
+
+share_layer_weights: false # false -> normal transformer, true -> looped

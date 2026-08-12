@@ -98,12 +98,12 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
 
         # duck-check the interface instead of poking signatures
         if not hasattr(model, 'T'):
-            trainer.logger.info(
+            trainer.log_info(
                 't_variance: model has no dynamics horizon T, skipping'
             )
             return
 
-        trainer.logger.info(
+        trainer.log_info(
             't_variance: sweeping T=%s with %d repeats',
             self.t_values, self.n_repeats,
         )
@@ -150,7 +150,7 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
         fig.savefig(path, dpi=130)
         plt.close(fig)
 
-        trainer.logger.info('t_variance: wrote %s', path)
+        trainer.log_info('t_variance: wrote %s', path)
 
         if trainer.cfg.wandb.enabled and trainer.accelerator.is_main_process:
             try:
@@ -168,9 +168,10 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
                         run.summary[f't_variance/acc_std_T{t}'] = s
             except Exception:
                 # never let a plot kill a long run at the finish line
-                trainer.logger.warning(
-                    't_variance: wandb logging failed', exc_info=True
-                )
+                if trainer.logger is not None:
+                    trainer.logger.warning(
+                        't_variance: wandb logging failed', exc_info=True
+                    )
 
 
 sort_of_clevr_t_variance_callbacks: dict[str, CallbackSpec] = {

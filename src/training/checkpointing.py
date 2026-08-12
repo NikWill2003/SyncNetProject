@@ -1,4 +1,4 @@
-# TODO: when we are doing some longer runs?
+# TODO: if we are do some longer runs?
 
 class CheckpointingManager:
     ...

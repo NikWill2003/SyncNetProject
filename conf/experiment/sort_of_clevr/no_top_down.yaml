@@ -1,6 +1,0 @@
-# @package _global_
-model:
-  use_top_down: false
-
-wandb:
-  tags: [ablation, no_top_down]

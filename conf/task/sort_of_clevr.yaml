@@ -2,7 +2,7 @@
 # @package _global_
 defaults:
   - /dataset: sort_of_clevr/default
-  - /model: sort_of_clevr/syncnet_v1
+  - /model: sort_of_clevr/syncnet
   - /callbacks: sort_of_clevr/default
   - _self_
 
@@ -40,6 +40,5 @@ wandb:
   enabled: true
   project_name: sort_of_clevr
   entity: niks_priv
-  group: null
   run_name: null
   tags: []

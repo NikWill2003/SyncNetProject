@@ -9,11 +9,11 @@ import torch.nn.functional as F
 
 from dataclasses import dataclass
 
-from ....core.encoders import PatchifyEncoder, CNNEncoder
-from ..config import SortOfClevrDataConfig
-from ..contracts import SortOfClevrOutput
-from ..data import constants as C
-from .syncnet_v1 import SortOfClevrSyncNetV1Config
+from src.core.encoders import PatchifyEncoder, CNNEncoder
+from src.tasks.sort_of_clevr.config import SortOfClevrDataConfig
+from src.tasks.sort_of_clevr.contracts import SortOfClevrOutput
+from src.tasks.sort_of_clevr.data import constants as C
+from legacy_models.sort_of_clevr.syncnet_v1 import SortOfClevrSyncNetV1Config
 
 
 @dataclass

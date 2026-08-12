@@ -1,36 +1,26 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, TYPE_CHECKING
+from typing import Any, Literal, Optional, TYPE_CHECKING, cast
 from pathlib import Path
 import math
 from collections import defaultdict
+import hashlib
 
+import torch.nn as nn
+from accelerate import Accelerator
 import wandb
+from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
 from hydra.types import RunMode
+
+from .utils import get_param_count
 
 if TYPE_CHECKING:
     from ..core.config import Config
 
 
 def get_wandb_init(cfg: Config, out_dir: str) -> dict[str, Any]:
-    """
-    Naming:
-        single run: {model}::{date}::{time}
-        multirun: {model}::multirun::{sweep_stamp}::{job_num}
-
-    Group:
-        - only populates on multirun
-        - concatenates the timestamp with the overrides excluding the seeds so that
-          seeded runs can be grouped 
-
-    Tags: 
-        append: 
-            - sweep:{stamp} (multirun if multirun)
-            - model:{choice}
-            - dataset:{name}
-            - exp:{choice}
-    """
+    
     hc = HydraConfig.get()
 
     choices = hc.runtime.choices
@@ -45,14 +35,18 @@ def get_wandb_init(cfg: Config, out_dir: str) -> dict[str, Any]:
         time_stamp, job_num = run_dir.parent.name, run_dir.name
         name = f'{model_choice}::multirun::{time_stamp}::{job_num}'
 
-        non_seed = [o for o in overrides if not o.startswith('train.seed=')]
-        group = f'{time_stamp}|{",".join(sorted(non_seed))}'
+        non_seed = sorted(o for o in overrides if not 'train.seed=' in o)
+        non_seed_str = ",".join(non_seed)
+        non_seed_hash = hashlib.sha256(non_seed_str.encode('utf-8')).hexdigest()[:12]
+
+        group = f'{time_stamp}|seeded_rerun:{non_seed_hash}'
 
         auto_tags = [f'sweep:{time_stamp}']
     else:
         # outputs/<dataset>/<date>/<time>
         date, time = run_dir.parent.name, run_dir.name
         name = f'{model_choice}::{date}::{time}'
+
         group = None
         auto_tags = []
 
@@ -63,12 +57,50 @@ def get_wandb_init(cfg: Config, out_dir: str) -> dict[str, Any]:
     return {
         'entity': cfg.wandb.entity,
         'name': cfg.wandb.run_name or name,
-        'group': cfg.wandb.group or group,
+        'group': group,
         'tags': list(cfg.wandb.tags) + auto_tags,
         'notes': ' '.join(overrides), 
         'job_type': 'train',
         'dir': out_dir,
     }
+
+def accelerate_init_wandb(
+    cfg: Config,
+    accelerator: Accelerator, 
+    out_dir: str, 
+    model: nn.Module
+    ) -> None:
+    """
+    Run Name if not specified:
+        single run: {model}::{date}::{time}
+        multirun: {model}::multirun::{sweep_stamp}::{job_num}
+
+    Group (reserved for seeded reruns):
+        format: {timestamp}|seeded_rerun:{hashed_overides}
+        Only populated when a run is a multirun; appends hashed multirun overrides
+        to the multirun timestamps so that seeded reruns can be grouped
+
+    Append Tags: 
+        - sweep:{stamp} (only if multirun)
+        - model:{choice}
+        - dataset:{name}
+        - exp:{choice}
+    """
+
+    if cfg.wandb.project_name is None:
+        raise ValueError('project name must be specified when wandb is enabled')
+    
+    dict_cfg = dict[str, Any], OmegaConf.to_container(cfg, resolve=True) 
+    dict_cfg['n_params'] = get_param_count(model) # type: ignore
+
+    choices = HydraConfig.get().runtime.choices
+    if experiemnt := choices.get('experiment'): dict_cfg['experiment'] = experiemnt # type: ignore
+
+    accelerator.init_trackers(
+        project_name=cfg.wandb.project_name,
+        config=dict_cfg,  # type: ignore
+        init_kwargs={'wandb': get_wandb_init(cfg, out_dir)},
+    )
 
 def section(metrics: dict[str, float] | None, name: str) -> dict[str, float]:
     # prefix metrics to section them in wandb

@@ -4,7 +4,6 @@ defaults:
 
 # No communication (lower bound)
 name: coalitions
-forward_args: {}
 
 gate: no_comm
 

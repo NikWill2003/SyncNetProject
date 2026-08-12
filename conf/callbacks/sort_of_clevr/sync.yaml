@@ -1,5 +1,0 @@
-- name: accuracy
-- name: qtype_accuracy
-- name: sync_metrics
-- name: sync_viz
-- name: t_variance

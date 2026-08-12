@@ -4,7 +4,6 @@ defaults:
 
 # Higher-dim oscillator (d=4), a rung up the dimension ladder
 name: coalitions
-forward_args: {}
 
 gate: phase
 

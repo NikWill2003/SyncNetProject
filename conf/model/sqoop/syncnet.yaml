@@ -1,0 +1,33 @@
+defaults:
+  - sqoop_syncnet_base
+  - encoder: patchify
+  - _self_
+
+# the unified sort_of_clevr syncnet, wrapped for SQOOP: the [x, rel, y]
+# token triple is embedded and flattened into the question vector
+name: sqoop_syncnet
+emb_dim: 32
+
+q_conditioning: film
+partition: none
+use_pos_emb: true
+
+n_modules: 4
+module_dim: 128
+content_dim: 8
+query_hidden: 64
+
+gate_mode: phase
+T: 6
+dt: 0.1
+omega_init: 0.5
+learn_omega: true
+
+msg_dim: 64
+msg_agg: mean
+
+readout_mode: concat
+hidden_dim: 128
+
+encoder_cfg:
+  patch_size: 8

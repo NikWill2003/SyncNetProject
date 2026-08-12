@@ -9,13 +9,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import MISSING
 
-from ....core.config import ModelConfig
-from ....core.encoders import (
+from src.core.config import ModelConfig
+from src.core.encoders import (
     PatchifyEncoder, CNNEncoder, EncoderConfig
 )
-from ..config import SortOfClevrDataConfig
-from ..contracts import SortOfClevrOutput
-from ..data import constants as C
+from src.tasks.sort_of_clevr.config import SortOfClevrDataConfig
+from src.tasks.sort_of_clevr.contracts import SortOfClevrOutput
+from src.tasks.sort_of_clevr.data import constants as C
 
 Encoder = PatchifyEncoder | CNNEncoder
 
@@ -74,7 +74,6 @@ Interface notes:
 @dataclass
 class SortOfClevrRecurrentSyncNetConfig(ModelConfig):
     name: str = 'sort_of_clevr_recurrent_syncnet'
-    forward_args: dict[str, Any] = field(default_factory=dict)
 
     # modules
     n_modules: int = 4
@@ -95,10 +94,30 @@ class SortOfClevrRecurrentSyncNetConfig(ModelConfig):
     k_hidden: int = 64           # coupling MLP width
     deterministic_phase: bool = False
 
+    # positional embeddings for the token pathway (the flatten destroys
+    # grid structure; position must be injected before it -- see SQOOP
+    # position-blindness result, 2026-08-04)
+    use_pos_emb: bool = True
+
     # readout
+    #   'attn' -- final-attention content pooling (original)
+    #   'sync' -- CTM-style: decay-weighted pairwise synchrony of module
+    #             phase and content trajectories (after Darlow et al.
+    #             2025; here at module granularity on our own scaffold)
+    #   'both' -- concat of the two
+    readout_mode: str = 'attn'
     hidden_dim: int = 128
 
     encoder_cfg: EncoderConfig = MISSING
+
+
+@dataclass
+class SortOfClevrCTMSyncNetConfig(SortOfClevrRecurrentSyncNetConfig):
+    """Registry alias: the recurrent model with the CTM-style synchrony
+    readout as default. Same class, distinct name so wandb/model sweeps
+    separate cleanly."""
+    name: str = 'sort_of_clevr_ctm_syncnet'
+    readout_mode: str = 'sync'
 
 
 class SortOfClevrRecurrentSyncNet(nn.Module):
@@ -125,6 +144,8 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
             omega_init: float = 0.5,
             k_hidden: int = 64,
             deterministic_phase: bool = False,
+            use_pos_emb: bool = True,
+            readout_mode: str = 'attn',
             hidden_dim: int = 128,
             ):
         super().__init__()
@@ -185,10 +206,41 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
             nn.Tanh(),
         )
 
+        # positional embeddings, injected post-norm / pre-flatten
+        self.use_pos_emb = use_pos_emb
+        if use_pos_emb:
+            self.pos_emb = nn.Parameter(
+                0.02 * torch.randn(1, ch, self.spatial, self.spatial)
+            )
+
         # readout
+        if readout_mode not in ('attn', 'sync', 'both'):
+            raise ValueError(f'unknown readout_mode: {readout_mode!r}')
+        self.readout_mode = readout_mode
+        self.n_pairs = n_modules * (n_modules - 1) // 2
+        iu = torch.triu_indices(n_modules, n_modules, offset=1)
+        self.register_buffer('pair_i', iu[0])
+        self.register_buffer('pair_j', iu[1])
+        if readout_mode in ('sync', 'both'):
+            # per-pair learnable recency decay (CTM's learned decay, at
+            # module granularity); softplus(-2) ~ 0.13 -> mild recency
+            self.sync_decay_theta = nn.Parameter(
+                -2.0 * torch.ones(self.n_pairs)
+            )
+            self.sync_decay_h = nn.Parameter(
+                -2.0 * torch.ones(self.n_pairs)
+            )
+
+        sync_dim = 2 * self.n_pairs
+        head_in = {
+            'attn': n_modules * content_dim,
+            'sync': sync_dim,
+            'both': n_modules * content_dim + sync_dim,
+        }[readout_mode] + q_dim
+
         self.content_head = nn.Linear(ch, content_dim)
         self.head = nn.Sequential(
-            nn.Linear(n_modules * content_dim + q_dim, hidden_dim),
+            nn.Linear(head_in, hidden_dim),
             nn.GELU(),
             nn.Linear(hidden_dim, answer_dim),
         )
@@ -216,6 +268,50 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
 
         return theta + self.dt * (self.omega + coupling)
 
+    def _sync_features(
+            self,
+            theta_hist: list[torch.Tensor],   # T x (B, M)
+            h_hist: list[torch.Tensor],       # T x (B, M, d)
+            ) -> torch.Tensor:
+        """Decay-weighted pairwise synchrony over the rollout.
+
+        Gradients flow through the full trajectories -- this is the point:
+        under this readout the phase parameters receive dense supervision
+        instead of the long gating->h->query path.
+        """
+        dev = self.pair_i.device
+        if len(theta_hist) == 0:
+            # T=0: no rollout, no synchrony evidence
+            return torch.zeros(
+                self._sync_batch, 2 * self.n_pairs, device=dev
+            )
+
+        theta = torch.stack(theta_hist, dim=1)          # (B, T, M)
+        h = torch.stack(h_hist, dim=1)                  # (B, T, M, d)
+        T = theta.shape[1]
+
+        # per-pair normalized exponential recency weights
+        ages = torch.arange(
+            T - 1, -1, -1, device=theta.device, dtype=theta.dtype
+        )                                               # (T,) age of step
+        def weights(decay_param):
+            r = F.softplus(decay_param)                 # (P,)
+            w = torch.exp(-r.unsqueeze(-1) * ages)      # (P, T)
+            return w / w.sum(dim=-1, keepdim=True)
+
+        d_theta = theta[:, :, self.pair_i] - theta[:, :, self.pair_j]
+        sync_theta = torch.einsum(
+            'btp,pt->bp', torch.cos(d_theta), weights(self.sync_decay_theta)
+        )
+
+        h_n = F.normalize(h, dim=-1)
+        cos_h = (h_n[:, :, self.pair_i] * h_n[:, :, self.pair_j]).sum(-1)
+        sync_h = torch.einsum(
+            'btp,pt->bp', cos_h, weights(self.sync_decay_h)
+        )
+
+        return torch.cat([sync_theta, sync_h], dim=-1)  # (B, 2P)
+
     # ------------------------------------------------------------------
 
     def forward(
@@ -240,6 +336,8 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
             beta_f = self.film_beta(q).unsqueeze(-1).unsqueeze(-1)
             c = c * (1.0 + gamma_f) + beta_f
         c = self.c_norm(c)
+        if self.use_pos_emb:
+            c = c + self.pos_emb
 
         c_flat = c.permute(0, 2, 3, 1).reshape(B, -1, self.ch)  # (B, P, ch)
         if scramble_state:
@@ -259,6 +357,10 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
             {'phase': [], 'gates': [], 'attn': [], 'h': []}
             if return_trace else None
         )
+
+        need_sync = self.readout_mode in ('sync', 'both')
+        theta_hist: list[torch.Tensor] = []
+        h_hist: list[torch.Tensor] = []
 
         # uniform attention so T=0 still reads *something* (T-ablations)
         P = c_flat.shape[1]
@@ -289,14 +391,25 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
             # 5. phase update (reads the *new* h, as in the notes)
             theta = self._phase_step(theta, h)
 
+            if need_sync:
+                theta_hist.append(theta)   # NOT detached: grads flow
+                h_hist.append(h)
+
             if return_trace:
                 traces['phase'].append(theta.detach())          # type: ignore
                 traces['gates'].append(g.detach())              # type: ignore
                 traces['attn'].append(attn.detach())            # type: ignore
                 traces['h'].append(h.detach())                  # type: ignore
 
-        m_content = torch.einsum('bmp,bpd->bmd', attn, b_content)
-        logits = self.head(torch.cat([m_content.flatten(1), q], dim=-1))
+        parts: list[torch.Tensor] = []
+        if self.readout_mode in ('attn', 'both'):
+            m_content = torch.einsum('bmp,bpd->bmd', attn, b_content)
+            parts.append(m_content.flatten(1))
+        if need_sync:
+            self._sync_batch = B
+            parts.append(self._sync_features(theta_hist, h_hist))
+        parts.append(q)
+        logits = self.head(torch.cat(parts, dim=-1))
 
         # phase order parameter over modules + gate openness
         with torch.no_grad():
@@ -356,5 +469,7 @@ class SortOfClevrRecurrentSyncNet(nn.Module):
             omega_init=cfg.omega_init,
             k_hidden=cfg.k_hidden,
             deterministic_phase=cfg.deterministic_phase,
+            use_pos_emb=cfg.use_pos_emb,
+            readout_mode=cfg.readout_mode,
             hidden_dim=cfg.hidden_dim,
         )

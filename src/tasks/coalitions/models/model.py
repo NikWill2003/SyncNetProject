@@ -18,7 +18,6 @@ from .base import CoalitionsBase
 @dataclass
 class CoalitionsConfig(ModelConfig):
     name: str = 'coalitions'
-    forward_args: dict[str, Any] = field(default_factory=dict)
 
     # gate mechanism: the sole architectural variable
     #   'phase' | 'mlp' | 'recurrent' | 'attention'

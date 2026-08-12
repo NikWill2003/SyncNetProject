@@ -1,4 +1,3 @@
-
 # TODO: need to add in reference to original github that I adapted
 
 from __future__ import annotations
@@ -6,7 +5,6 @@ from __future__ import annotations
 import cv2
 import numpy as np
 import random
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +22,12 @@ def center_generate(
         center = np.random.randint(0+obj_size, img_size - obj_size, 2)        
         if len(objects) > 0:
             for _, c, _ in objects:
-                if ((center - c) ** 2).sum() < ((obj_size * 2) ** 2):
+                # squares are axis-aligned with half-width obj_size, so
+                # they overlap unless they are separated along x OR y.
+                # Euclidean distance alone allowed diagonal overlap
+                # (~15% of scenes had an occluded object).
+                if (abs(center[0] - c[0]) < obj_size * 2
+                        and abs(center[1] - c[1]) < obj_size * 2):
                     pas = False
         if pas:
             return center
@@ -35,7 +38,7 @@ def generate_non_relational_question(
         ) -> tuple[np.ndarray, int]:
     
     question = np.zeros((QUESTION_SIZE))
-    color = random.randint(0,5)
+    color = random.randint(0, len(COLOURS) - 1)
     question[color] = 1
     question[Q_TYPE_IDX] = 1
     subtype = random.randint(0,2)
@@ -78,7 +81,10 @@ def generate_binary_question(objects: list[np.ndarray]) -> tuple[np.ndarray, int
         """closest-to->rectangle/circle"""
         my_obj = objects[color][1]
         dist_list = [((my_obj - obj[1]) ** 2).sum() for obj in objects]
-        dist_list[dist_list.index(0)] = 999
+        # exclude self by index: distances are SQUARED pixel distances
+        # (up to ~11k), so the original 999 sentinel was reachable and
+        # made an object its own nearest neighbour in ~35% of scenes.
+        dist_list[color] = float('inf')
         closest = dist_list.index(min(dist_list))
         if objects[closest][2] == 'r':
             answer = 2
@@ -118,7 +124,7 @@ def generate_ternary_question(
     question[color1] = 1
     # 2nd object
     color2 = rnd_colors[1]
-    question[6 + color2] = 1
+    question[len(COLOURS) + color2] = 1
 
     question[Q_TYPE_IDX + 2] = 1
     
@@ -181,9 +187,6 @@ def generate_ternary_question(
 
         obtuse_count = 0
 
-        # disable warnings
-        # the angle computation may fail if the points are on a line
-        warnings.filterwarnings("ignore")
         for other_obj in objects:
             # skip object A and B
             if (other_obj[0] == color1) or (other_obj[0] == color2):
@@ -195,15 +198,19 @@ def generate_ternary_question(
             a = np.linalg.norm(B - C)
             b = np.linalg.norm(C - A)
             c = np.linalg.norm(A - B)
-            # angles by law of cosine
-            alpha = np.rad2deg(np.arccos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)))
-            beta = np.rad2deg(np.arccos((a ** 2 + c ** 2 - b ** 2) / (2 * a * c)))
-            gamma = np.rad2deg(np.arccos((a ** 2 + b ** 2 - c ** 2) / (2 * a * b)))
+            # angles by law of cosines; clip guards float error on
+            # near-degenerate (collinear) triples, which otherwise gives
+            # nan and is silently treated as not-obtuse
+            alpha = np.rad2deg(np.arccos(
+                np.clip((b ** 2 + c ** 2 - a ** 2) / (2 * b * c), -1.0, 1.0)))
+            beta = np.rad2deg(np.arccos(
+                np.clip((a ** 2 + c ** 2 - b ** 2) / (2 * a * c), -1.0, 1.0)))
+            gamma = np.rad2deg(np.arccos(
+                np.clip((a ** 2 + b ** 2 - c ** 2) / (2 * a * b), -1.0, 1.0)))
             max_angle = max(alpha, beta, gamma)
             if max_angle >= 90 and max_angle < 180:
                 obtuse_count += 1
 
-        warnings.filterwarnings("default")
         answer = obtuse_count + 4
 
     return question, answer
@@ -214,7 +221,7 @@ def generate_sample(
         ):
     
     objects = []
-    img = np.ones((img_size,img_size,3)) * 255
+    img = np.ones((img_size, img_size, 3), dtype=np.uint8) * 255
 
     # generate objects
     for color_id,color in enumerate(COLOURS.values()):  
@@ -239,7 +246,14 @@ def generate_sample(
     
     # generate questions
     for _ in range(nb_questions):
-        ternary_q, ternary_a = generate_ternary_question(objects, img_size)
+        # NOTE (2026-08): these two calls had their second argument
+        # swapped. generate_ternary_question takes t_subtype and was
+        # receiving img_size (75 >= 3, so it silently fell through to the
+        # random branch -- cfg.dataset.t_subtype had no effect);
+        # generate_non_relational_question takes img_size and was
+        # receiving t_subtype (-1, so the left-of-centre and top-half
+        # tests compared against -0.5 and ALWAYS answered 'no').
+        ternary_q, ternary_a = generate_ternary_question(objects, t_subtype)
         ternary_questions.append(ternary_q)
         ternary_answers.append(ternary_a)
         
@@ -247,16 +261,18 @@ def generate_sample(
         binary_questions.append(binary_q)
         binary_answers.append(binary_a)
 
-        nonrel_q, nonrel_a = generate_non_relational_question(objects, t_subtype)
+        nonrel_q, nonrel_a = generate_non_relational_question(objects, img_size)
         nonrel_questions.append(nonrel_q)
         nonrel_answers.append(nonrel_a)
     
-    img = img/255.
+    # keep uint8: 8x smaller on disk and in the GPU cache; the loader
+    # divides by 255 (see _load_sort_of_clevr)
     return (
-        img, 
-        (ternary_questions, ternary_answers), 
-        (binary_questions, binary_answers), 
-        (nonrel_questions, nonrel_answers)
+        img,
+        (ternary_questions, ternary_answers),
+        (binary_questions, binary_answers),
+        (nonrel_questions, nonrel_answers),
+        objects,
         )
 
 
@@ -269,12 +285,19 @@ def build_dataset(
     ternary_questions, ternary_answers = [], []
     binary_questions, binary_answers = [], []
     nonrel_questions, nonrel_answers = [], []
-    
+    # ground-truth scene metadata: lets analysis split questions by
+    # whether the queried objects share a quadrant (i.e. whether the
+    # question actually requires cross-module communication) without
+    # recovering object positions from pixels
+    obj_positions, obj_shapes = [], []
+
     for _ in range(dataset_size):
-        img, ternary, binary, nonrel = generate_sample(
+        img, ternary, binary, nonrel, objects = generate_sample(
             img_size, obj_size, nb_questions, t_subtype
             )
         imgs.append(img)
+        obj_positions.append([o[1] for o in objects])
+        obj_shapes.append([1 if o[2] == 'r' else 0 for o in objects])
         ternary_questions.append(ternary[0])
         ternary_answers.append(ternary[1])
         binary_questions.append(binary[0])
@@ -291,13 +314,21 @@ def build_dataset(
         'binary_answers': np.array(binary_answers), 
         'nonrel_questions': np.array(nonrel_questions),
         'nonrel_answers': np.array(nonrel_answers),
+        # (n_scenes, n_colours, 2) centres in (x, y); colour index == row
+        'object_positions': np.array(obj_positions, dtype=np.int16),
+        # (n_scenes, n_colours) 1 = rectangle, 0 = circle
+        'object_shapes': np.array(obj_shapes, dtype=np.uint8),
     }
 
 def save_dataset(dataset: dict[str, np.ndarray], data_dir: Path, name: str):
 
     data_dir.mkdir(exist_ok=True, parents=True)
     file = data_dir / name
-    np.savez_compressed(file, allow_pickle=True, **dataset)
+    # allow_pickle is a keyword-only arg of savez_compressed on numpy>=2.
+    # All arrays here are numeric, so False enforces that: if a ragged or
+    # object-dtype array is ever added it fails here, at write time,
+    # instead of silently pickling and failing later at load.
+    np.savez_compressed(file, allow_pickle=False, **dataset)
 
     print(f'saved {name} to {str(str(data_dir.absolute()))}')
 
@@ -329,5 +360,3 @@ def prepare_sort_of_clevr(cfg: SortOfClevrDataConfig) -> None:
         cfg.nb_questions, cfg.t_subtype
     )
     save_dataset(train_dataset, data_dir, f'train.npz')
-
-

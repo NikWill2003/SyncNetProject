@@ -6,8 +6,8 @@ name: sort_of_clevr
 seed: 1              
 root: ./data
 dir: sort-of-clevr
-train_size: 9800 # number of scenes -> total samples num scenes * 3 * nb_questions
-test_size: 200 # val size also
+train_size: 20000 # number of scenes -> total samples num scenes * 3 * nb_questions
+test_size: 1000 # val size also
 img_size: 75
 obj_size: 5
 nb_questions: 10 # per subtype per image (x3 subtypes)

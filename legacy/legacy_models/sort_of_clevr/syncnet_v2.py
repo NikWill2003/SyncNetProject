@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..config import SortOfClevrDataConfig
-from .syncnet_v1 import SortOfClevrSyncNetV1, SortOfClevrSyncNetV1Config
+from src.tasks.sort_of_clevr.config import SortOfClevrDataConfig
+from legacy_models.sort_of_clevr.syncnet_v1 import SortOfClevrSyncNetV1, SortOfClevrSyncNetV1Config
 
 
 @dataclass

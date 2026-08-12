@@ -31,15 +31,30 @@ ANSWERS: list[str] = [
     'yellow',
 ]
 
+# index at which the count answers start
+COUNT_OFFSET: int = 4
+
 COUNT_ANSWERS: list[str] = [
     'yes',
     'no',
     'rectangle',
     'circle',
+    '0',
     '1',
     '2',
     '3',
     '4',
     '5',
-    '6',
 ]
+
+SUBTYPE_NAMES: dict[tuple[str, int], str] = {
+    ('non_relational', 0): 'query_shape',
+    ('non_relational', 1): 'left_of_centre',
+    ('non_relational', 2): 'top_half',
+    ('binary', 0): 'closest_shape',
+    ('binary', 1): 'furthest_shape',
+    ('binary', 2): 'count_same_shape',
+    ('ternary', 0): 'count_in_box',
+    ('ternary', 1): 'on_band',
+    ('ternary', 2): 'count_obtuse',
+}

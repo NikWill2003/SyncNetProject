@@ -6,3 +6,6 @@ __pycache__/
 /data/
 debug.log
 TODO.md
+/notebooks/
+*.zip
+/legacy_models/

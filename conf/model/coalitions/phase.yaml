@@ -4,7 +4,6 @@ defaults:
 
 # Scalar-phase gate, direct dphi update (primary mechanism under test)
 name: coalitions
-forward_args: {}
 
 gate: phase
 

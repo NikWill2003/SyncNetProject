@@ -2,6 +2,7 @@ from .metrics import (
     sort_of_clevr_metric_callbacks,
     AccuracyCallbackCfg,
     QtypeAccuracyCallbackCfg,
+    SubtypeAccuracyCallbackCfg,
 )
 from .visualisations import sort_of_clevr_visualisation_callbacks
 from .sync_metrics import sort_of_clevr_sync_metric_callbacks
@@ -22,4 +23,5 @@ __all__ = [
     'sort_of_clevr_callbacks',
     'AccuracyCallbackCfg',
     'QtypeAccuracyCallbackCfg',
+    'SubtypeAccuracyCallbackCfg',
 ]

@@ -49,7 +49,6 @@ def main(cfg: Config) -> float:
     loss_fn = build_loss_fn(cfg)
     callbacks = build_callbacks(cfg)
 
-    forward_args = OmegaConf.to_container(cfg.model.forward_args, resolve=True)
 
     if cfg.wandb.enabled:
         if cfg.wandb.project_name is None:
@@ -68,7 +67,6 @@ def main(cfg: Config) -> float:
             logger=logger,
             model=model,
             dataloaders=dataloaders,
-            forward_args=forward_args,  # type: ignore
             optimiser=optimiser,
             scheduler=scheduler,
             accelerator=accelerator,

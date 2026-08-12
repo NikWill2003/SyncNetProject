@@ -9,19 +9,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import MISSING
 
-from ....core.config import ModelConfig
-from ....core.encoders import (
+from src.core.config import ModelConfig
+from src.core.encoders import (
     PatchifyEncoder, CNNEncoder, EncoderConfig
     )
-from ..config import SortOfClevrDataConfig
-from ..contracts import SortOfClevrOutput
-from ..data import constants as C
+from src.tasks.sort_of_clevr.config import SortOfClevrDataConfig
+from src.tasks.sort_of_clevr.contracts import SortOfClevrOutput
+from src.tasks.sort_of_clevr.data import constants as C
 
 
 @dataclass
 class SortOfClevrSyncNetV1Config(ModelConfig):
     name: str = 'sort_of_clevr_syncnet_v1'
-    forward_args: dict[str, Any] = field(default_factory=dict)
 
     # Rotor / bottom state
     rotor_dim: int = 4

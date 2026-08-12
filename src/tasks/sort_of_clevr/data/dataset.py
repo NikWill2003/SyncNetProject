@@ -13,18 +13,21 @@ if TYPE_CHECKING:
     from ....core.config import Config
 
 def _move_tensor_dict(batch: dict[str, torch.Tensor], device: str):
-    non_blocking = (device == 'cuda')
     
-    return {
-        key: tensor.to(device, non_blocking=non_blocking) for key, tensor in batch.items()
-        }
+    non_blocking = str(device).startswith('cuda')
+    return {key: tensor.to(device, non_blocking=non_blocking) for key, tensor in batch.items()}
         
 
 def _load_sort_of_clevr(path: str):
     with np.load(path) as data:
             
-        images = torch.from_numpy(data['images']).float() # (n_scenes, H, W, C)
-        images = images.permute((0, 3, 1, 2))
+        # dataset might be in float32 or uint8
+        images = torch.from_numpy(data['images'])   # (n_scenes, H, W, C)
+        if images.dtype != torch.uint8:
+            images = images.float()
+            if float(images.max()) > 1.0:           # defensive: [0, 255] floats
+                images = images / 255.0
+        images = images.permute((0, 3, 1, 2)).contiguous()
 
         # (n_scenes, nb_questions, q_dim)
         ternary_questions = torch.from_numpy(data['ternary_questions']).long() 
@@ -63,6 +66,14 @@ def _load_sort_of_clevr(path: str):
         )
 
 
+def _to_float_images(images: torch.Tensor) -> torch.Tensor:
+    """uint8 [0, 255] -> float [0, 1]; float passes through."""
+    
+    if images.dtype == torch.uint8:
+        return images.float().div_(255.0)
+    return images
+
+
 class SortOfClevrDataset(Dataset):
 
     def __init__(self, path: str) -> None:
@@ -83,7 +94,7 @@ class SortOfClevrDataset(Dataset):
 
         image_idx = idx // self.total_nb_questions
         return {
-            'images': self.images[image_idx],
+            'images': _to_float_images(self.images[image_idx]),
             'questions': self.questions[idx],
             'answers': self.answers[idx],
         }
@@ -105,6 +116,9 @@ class SortOfClevrOnDeviceLoader:
         self.shuffle = shuffle
         self.total_nb_questions = total_nb_questions
         self.N = n_scenes * total_nb_questions
+        assert self.dataset['questions'].shape[0] == self.N, (
+            'question/scene count mismatch: '
+            f"{self.dataset['questions'].shape[0]} != {self.N}")
 
     def __len__(self) -> int:
         return (self.N + self.batch_size - 1) // self.batch_size
@@ -119,7 +133,8 @@ class SortOfClevrOnDeviceLoader:
             idx = order[i: i + self.batch_size]
             image_idx = idx // self.total_nb_questions
             yield {
-                'images': self.dataset['images'][image_idx],
+                'images': _to_float_images(
+                    self.dataset['images'][image_idx]),
                 'questions': self.dataset['questions'][idx],
                 'answers': self.dataset['answers'][idx],
             }
@@ -165,7 +180,7 @@ def build_dataloaders(
                 batch_size=cfg.train.train_bs,
                 shuffle=True,
                 num_workers=cfg.train.num_workers,
-                persistent_workers=(cfg.train.num_workers > 1),
+                persistent_workers=(cfg.train.num_workers > 0),
                 pin_memory=(device != 'cpu')
             ),
             DataLoader(
@@ -185,5 +200,3 @@ def build_dataloaders(
         )
     else:
         raise ValueError(f'unrecognised dataloader mode: {cfg.train.loader_mode}')
-
-    

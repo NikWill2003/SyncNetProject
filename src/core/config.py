@@ -16,8 +16,11 @@ class DataConfig:
 
 @dataclass
 class ModelConfig:
+    # Models must run on the batch alone: `model(**batch)`. Static
+    # forward behaviour is a field on the model config; a callback that
+    # needs a different forward (traces, t_override) calls the model
+    # itself.
     name: str = MISSING
-    forward_args: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -64,9 +67,7 @@ class WandBConfig:
     project_name: str | None = None
     entity: str | None = None
     tags: list[str] = field(default_factory=list)
-    run_name: str | None = None
-    group: str | None = None
-
+    run_name: str | None = None # prefer not to override and just allow for auto-naming
 
 @dataclass
 class OptimConfig:
@@ -74,7 +75,7 @@ class OptimConfig:
     lr: float = 3e-4
     weight_decay: float = 0.0
 
-    lr_scheduler: str = 'cosine_annealing' # 'cosine_annealing' or 'no'
+    lr_scheduler: str = 'cosine_annealing' # warmup_cosine or cosine_annealing or constant
     lr_scheduler_params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -84,8 +85,8 @@ class Config:
     train: TrainConfig = field(default_factory=TrainConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     wandb: WandBConfig = field(default_factory=WandBConfig)
+    optim: OptimConfig = field(default_factory=OptimConfig)
 
-    optim: OptimConfig = MISSING
     dataset: DataConfig = MISSING
     model: ModelConfig = MISSING
     callbacks: list[Any] = MISSING

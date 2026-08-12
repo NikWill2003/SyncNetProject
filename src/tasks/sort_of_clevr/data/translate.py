@@ -22,11 +22,20 @@ def _answer_idx(answer: torch.Tensor | np.ndarray | int) -> int:
     if a.ndim == 0:
         return int(a.item())
 
-    if a.shape[-1] == ANSWER_SIZE:
-        return int(a.argmax().item())
-
     if a.numel() == 1:
         return int(a.item())
+
+    if a.ndim == 1 and a.shape[0] == ANSWER_SIZE:
+        looks_one_hot = (
+            a.dtype.is_floating_point
+            or int((a != 0).sum().item()) == 1
+        )
+        if looks_one_hot:
+            return int(a.argmax().item())
+        raise ValueError(
+            'Ambiguous answer of shape (ANSWER_SIZE,): pass a scalar '
+            'label, or a float one-hot vector.'
+        )
 
     raise ValueError(f'Could not decode answer with shape {tuple(a.shape)}.')
 
@@ -40,9 +49,12 @@ def translate_question(question: torch.Tensor | np.ndarray) -> str:
         )
 
     colour_1 = COLOURS_KEY[_one_hot_idx(q, 0, 6)]
-    colour_2 = COLOURS_KEY[_one_hot_idx(q, 6, 12)]
     q_type = _one_hot_idx(q, Q_TYPE_IDX, Q_TYPE_IDX + 3)
     subtype = _one_hot_idx(q, SUB_Q_TYPE_IDX, SUB_Q_TYPE_IDX + 3)
+
+    colour_2 = (
+        COLOURS_KEY[_one_hot_idx(q, 6, 12)] if q_type == 2 else None
+    )
 
     if q_type == 0:
         if subtype == 0:
@@ -110,6 +122,10 @@ def translate_answer(
     )
 
     if count_question:
+        if idx < COUNT_OFFSET:
+            raise ValueError(
+                f'count question with non-count answer index {idx}'
+            )
         return COUNT_ANSWERS[idx]
 
     return ANSWERS[idx]

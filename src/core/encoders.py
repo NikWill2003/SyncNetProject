@@ -24,16 +24,14 @@ class CNNEncoderConfig(EncoderConfig):
     ch: int = 128
     hidden: int = 64
 
-
 class PatchifyEncoder(nn.Module):
 
     def __init__(self, img_size: int, ch: int = 128, patch_size: int = 5):
         super().__init__()
 
         self.patchify = nn.Conv2d(3, ch, patch_size, stride=patch_size, padding=0)
-        H = (img_size - patch_size) // patch_size + 1
-        self.spatial = H
-        self.n_tokens = H * H
+        self.spatial = (img_size - patch_size) // patch_size + 1
+        self.n_tokens = self.spatial * self.spatial
         self.ch = ch
         self.patch_size = patch_size
 

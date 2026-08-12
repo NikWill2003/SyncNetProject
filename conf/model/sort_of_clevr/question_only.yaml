@@ -1,0 +1,8 @@
+defaults:
+  - sort_of_clevr_question_only_base
+  - _self_
+
+# guessing floor: question in, answer out
+name: sort_of_clevr_question_only
+hidden_dim: 128
+n_layers: 2

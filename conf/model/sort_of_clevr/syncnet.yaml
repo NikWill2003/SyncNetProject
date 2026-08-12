@@ -1,0 +1,48 @@
+defaults:
+  - sort_of_clevr_syncnet_base
+  - encoder: patchify
+  - _self_
+
+name: sort_of_clevr_syncnet
+
+# input: where the question enters, and who can see what
+q_conditioning: film        # film | broadcast_cat | token
+q_emb_dim: 32
+partition: none             # none | quadrant (M=4) | views (M=3)
+use_pos_emb: true
+
+# modules
+n_modules: 4
+module_dim: 128
+content_dim: 8
+query_hidden: 64
+beta_init: 5.0
+learn_beta: true
+use_module_embed: false
+embed_scale: 1.0
+
+# gates
+gate_mode: phase            # phase | attn | mlp | open | frozen
+T: 6
+dt: 0.1
+omega_init: 0.5
+learn_omega: true
+k_hidden: 64
+deterministic_phase: false
+
+# messages
+msg_dim: 64
+msg_agg: mean               # mean | bus
+
+# readout
+readout_mode: concat        # concat | sync | both | sum
+hidden_dim: 128
+use_prior_head: true
+vote_sees_q: true
+
+encoder: 
+  name: patchify # patchify | cnn
+  ch: 128
+  patch_size: 5
+  hidden: 64 # only for cnn
+

@@ -4,7 +4,6 @@ defaults:
 
 # RIM-style content-attention gate
 name: coalitions
-forward_args: {}
 
 gate: attention
 

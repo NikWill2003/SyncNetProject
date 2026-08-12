@@ -39,6 +39,5 @@ wandb:
   enabled: true
   project_name: coalitions
   entity: niks_priv
-  group: null
   run_name: null
   tags: []

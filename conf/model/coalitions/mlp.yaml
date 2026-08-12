@@ -4,7 +4,6 @@ defaults:
 
 # Memoryless learned gate (unconstrained, no persistence)
 name: coalitions
-forward_args: {}
 
 gate: mlp
 

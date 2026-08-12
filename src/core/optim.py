@@ -2,7 +2,7 @@ from torch.optim import (
     Optimizer, AdamW
     )
 from torch.optim.lr_scheduler import (
-    LRScheduler, ConstantLR, CosineAnnealingLR
+    LRScheduler, ConstantLR, CosineAnnealingLR, LinearLR, SequentialLR
     )
 import torch.nn as nn
 
@@ -32,6 +32,23 @@ def build_lr_scheduler(
                 T_max=n_steps,
                 **optim_cfg.lr_scheduler_params
             )
+
+        case 'warmup_cosine':
+
+            params = dict(optim_cfg.lr_scheduler_params)
+            # if not specified use 2pct of steps
+            warmup = int(params.pop('warmup_steps', max(1, n_steps // 50)))
+            warmup = max(1, min(warmup, n_steps - 1))
+            return SequentialLR(
+                optim,
+                schedulers=[
+                    LinearLR(optim, start_factor=1e-8, end_factor=1.0,
+                             total_iters=warmup),
+                    CosineAnnealingLR(optim, T_max=n_steps - warmup, **params),
+                ],
+                milestones=[warmup],
+            )
+
         
         case _:
             raise ValueError(f'unrecognised lr scheduler: {optim_cfg.lr_scheduler}')

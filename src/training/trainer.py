@@ -1,4 +1,5 @@
-from typing import Any, Literal, Iterator
+from typing import Any, Literal, Iterator, Optional
+import time
 
 import torch
 from torch import Tensor
@@ -29,16 +30,21 @@ from ..core.callbacks import CallBackList
 from ..core import Config
 
 
+def _sync() -> None:
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+
 class Trainer:
 
     def __init__(
         self,
         cfg: Config,
         out_dir: str,
-        logger: MultiProcessAdapter,
+        logger: Optional[MultiProcessAdapter],
         model: nn.Module,
         dataloaders: tuple[DataLoader | Iterator[dict[str, Tensor]], ...],
-        forward_args: dict[str, Any],
         optimiser: Optimizer,
         scheduler: LRScheduler,
         accelerator: Accelerator,
@@ -51,8 +57,9 @@ class Trainer:
 
         self.out_dir = out_dir
         self.logger = logger
+        self.log_info = self.logger.info if self.logger is not None else print
+        self.log_debug = self.logger.debug if self.logger is not None else lambda x: None
         self.model = model
-        self.forward_args = forward_args
         self.optimiser = optimiser
         self.scheduler = scheduler
         self.accelerator = accelerator
@@ -92,23 +99,6 @@ class Trainer:
                 self.scheduler,
             )
 
-        self.early_stopping = EarlyStoppingManager(
-            self.model, 
-            self.train_cfg.early_stop_metric, 
-            self.train_cfg.early_stop_big_is_better, 
-            self.train_cfg.early_stop_patience, 
-            self.train_cfg.early_stop_min_delta
-        )
-        
-        self.train_meter = MultiAverageMeter()
-
-        # make dataloader an infinite step iterator
-        self.train_batch_iter = batch_iter(self.train_dataloader)
-
-        #step tracking
-        self.total_step = 0
-        self.opt_step = 0
-
     
     # step/interval tracking:
     
@@ -133,18 +123,23 @@ class Trainer:
         wandb_metrics = wandb_format_metrics(metrics, mode)
         self.accelerator.log(wandb_metrics, step)
 
+        include_metrics = (
+            self.cfg.logging.info_metrics + ['opt_sps', 'eval_s']
+            )
+            
         info_metrics = {
             m: v for m, v in desection(metrics).items()
-            if m in self.cfg.logging.info_metrics
+            if m in include_metrics
         }
-        self.logger.info('[ %-5s | Step: %-6d | %s ]', mode.capitalize(), self.opt_step, cmdline_format_metrics(info_metrics))
-        self.logger.debug('[ %-5s | Step: %-6d | %s ]', mode.capitalize(), self.opt_step, cmdline_format_metrics(metrics))
+        
+        self.log_info(f'[ {mode.capitalize():<5} | Step: {step:<6d} | {cmdline_format_metrics(info_metrics)} ]')
+        self.log_debug(f'[ {mode.capitalize():<5} | Step: {step:<6d} | {cmdline_format_metrics(metrics)} ]')
 
     def summary(
             self, metrics: dict, mode: Literal['train', 'eval', 'test']
         ) -> None:
 
-        self.logger.info('[ %-5s | Summary | %s]', mode.capitalize(), cmdline_format_metrics(metrics))
+        self.log_info(f'[{mode.capitalize():<5} | Summary | {cmdline_format_metrics(metrics)}]')
 
         import wandb
         if not self.accelerator.is_main_process:
@@ -160,25 +155,27 @@ class Trainer:
 
     def train_init_log(self) -> None:
 
-        self.logger.info('Starting training')
-        self.logger.info('Model: %s', self.model.__class__.__name__)
-        self.logger.info('Parameters: total=%d', get_param_count(self.model))
-        self.logger.info('Config:\n%s',OmegaConf.to_yaml(self.cfg, resolve=True))
-        self.logger.info('Full model:\n%s', self.model)
+        self.log_info('Starting training')
+        self.log_info(f'Model: {self.model.__class__.__name__}')
+        self.log_info(f'Parameters: total={get_param_count(self.model)}')
+        self.log_info(f'Config:\n{OmegaConf.to_yaml(self.cfg, resolve=True)}')
+        self.log_info(f'Full model:\n{self.model}')
+
     
     # train and eval functions:
 
     def train_step(
         self,
         batch: dict[str, Any],
-        forward_args: dict[str, Any],
         max_grad_norm: float=1.0
         ) -> dict[str, float]:
 
         self.model.train()
         metrics = {}
 
-        out: dict = self.model(**batch, **forward_args)
+        # a model must run correctly on the batch alone -- callbacks that
+        # need a different forward call the model themselves
+        out: dict = self.model(**batch)
         loss, loss_metrics = self.loss_fn(out, batch)
         self.accelerator.backward(loss)
 
@@ -205,9 +202,11 @@ class Trainer:
     def evaluate(
         self,
         dataloader: DataLoader | Iterator[dict[str, Any]],
-        forward_args: dict[str, Any],
         mode: Literal['eval', 'test']
         ) -> dict[str, float]:
+
+        _sync()
+        start = time.perf_counter()
 
         self.model.eval()
         eval_metrics = MultiAverageMeter()
@@ -215,7 +214,7 @@ class Trainer:
 
             batch_metrics = {}
 
-            out: dict = self.model(**batch, **forward_args)
+            out: dict = self.model(**batch)
             _, loss_metrics = self.loss_fn(out, batch)
 
             batch_metrics |= section(out.get('metrics', {}), 'model')
@@ -230,51 +229,79 @@ class Trainer:
                 )
 
             eval_metrics.update(batch_metrics, n=get_batch_dict_size(batch))
+
+        _sync()
+        return (
+            eval_metrics.get_averages() | 
+            section({'eval_s': time.perf_counter()-start}, 'timing')
+            )
+
+    # train components
+
+    def on_train_start(self) -> None:
+        self.early_stopping = EarlyStoppingManager(
+            self.model, 
+            self.train_cfg.early_stop_metric, 
+            self.train_cfg.early_stop_big_is_better, 
+            self.train_cfg.early_stop_patience, 
+            self.train_cfg.early_stop_min_delta
+        )
         
-        return eval_metrics.get_averages()
+        self.train_meter = MultiAverageMeter()
 
-    # main entry point:
-    
-    def train(self) -> dict[str, float]:
+        # make dataloader an infinite step iterator
+        self.train_batch_iter = batch_iter(self.train_dataloader)
 
+        #step tracking
+        self.total_step = 0
+        self.opt_step = 0
+        
         self.train_init_log()
 
-        while self.opt_step < self.train_cfg.n_steps:
-            
-            self.step()
-            batch = next(self.train_batch_iter)
-            
-            with self.accelerator.accumulate(self.model):
-                train_step_metrics = self.train_step(
-                    batch, self.forward_args, self.train_cfg.grad_clip
-                )
-            
-            self.train_meter.update(train_step_metrics, n=get_batch_dict_size(batch))
-
-            if self.hit_step_interval(self.cfg.logging.eval_log_interval):
-                eval_metrics = self.evaluate(
-                    self.eval_dataloader, self.forward_args, mode='eval'
-                )
-                self.log(eval_metrics, self.opt_step, mode='eval')
-                early_stopping_summary = self.early_stopping.update(
-                    desection(eval_metrics), self.opt_step
-                )
-                if early_stopping_summary['should_stop']:
-                    self.logger.info(
-                        'early stopping triggered | best step: %s | num_bad_steps: %s', 
-                        early_stopping_summary['best_step'],
-                        early_stopping_summary['num_bad_steps'],
-                        )
-                    break
-
-            if self.hit_step_interval(self.cfg.logging.train_log_interval):
-                train_metrics = self.train_meter.get_averages()
-                self.log(train_metrics, self.opt_step, mode='train')
-                
-                self.train_meter.reset()
+        self.should_stop = False
         
+        _sync()
+        self.step_interval_start = time.perf_counter()
+        self.tot_training_time = 0
+
+    def on_train_log_hit(self) -> None:
+        _sync()
+        cur_training_time = (
+            self.tot_training_time + time.perf_counter() - self.step_interval_start
+            )
+                
+        train_metrics = self.train_meter.get_averages()
+        
+        train_metrics |= section({
+            'opt_sps': self.opt_step/cur_training_time}, 'timing'
+            )
+        self.log(train_metrics, self.opt_step, mode='train')
+        
+        self.train_meter.reset()
+
+    def on_eval_hit(self) -> None:
+        _sync()
+        self.tot_training_time += time.perf_counter() - self.step_interval_start
+
+        eval_metrics = self.evaluate(
+            self.eval_dataloader, mode='eval'
+        )
+        self.log(eval_metrics, self.opt_step, mode='eval')
+        early_stopping_summary = self.early_stopping.update(
+            desection(eval_metrics), self.opt_step
+        )
+        if early_stopping_summary['should_stop']:
+            self.log_info(
+                f'early stopping triggered | best step: {early_stopping_summary["best_step"]}| '
+                f'num_bad_steps: {early_stopping_summary["num_bad_steps"]}'
+                )
+            self.should_stop = True
+        self.step_interval_start = time.perf_counter()
+
+    def on_train_end(self) -> dict[str, float | int]:
         self.early_stopping.load_best_model() 
-        self.logger.info('loading best model')
+        self.log_info('loading best model')
+
         if self.cfg.logging.save_best:
             self.early_stopping.save_best_model(self.out_dir)
             
@@ -282,10 +309,40 @@ class Trainer:
         self.summary(es_best_state, 'eval')
         
         test_metrics = self.evaluate(
-            self.test_dataloader, self.forward_args, mode='test'
+            self.test_dataloader, mode='test'
             )
         self.summary(test_metrics, 'test')
 
         self.callbacks.on_train_end(self)
 
         return es_best_state | test_metrics
+
+    # main entry point:
+    
+    def train(self) -> dict[str, float| int]:
+
+        self.on_train_start()
+
+        while self.opt_step < self.train_cfg.n_steps:
+            
+            self.step()
+            batch = next(self.train_batch_iter)
+
+            with self.accelerator.accumulate(self.model):
+
+                train_step_metrics = self.train_step(
+                    batch, self.train_cfg.grad_clip
+                )
+            
+            self.train_meter.update(train_step_metrics, n=get_batch_dict_size(batch))
+
+            if self.hit_step_interval(self.cfg.logging.train_log_interval):
+                self.on_train_log_hit()
+
+            if self.hit_step_interval(self.cfg.logging.eval_log_interval):
+                self.on_eval_hit()
+                if self.should_stop: 
+                    break
+
+        return self.on_train_end()
+        
