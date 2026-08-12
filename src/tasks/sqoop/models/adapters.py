@@ -34,7 +34,7 @@ from ....core.encoders import (
 # [x, rel, y] token triple embedded and flattened into the question
 # vector the inner model expects.
 from ...sort_of_clevr.models.syncnet import (
-    SortOfClevrSyncNet, SortOfClevrSyncNetConfig, _to_grouped,
+    SortOfClevrSyncNet, SortOfClevrSyncNetConfig
 )
 from ..config import SqoopDataConfig
 from ..contracts import SqoopOutput

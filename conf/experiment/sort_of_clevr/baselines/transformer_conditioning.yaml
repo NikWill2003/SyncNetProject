@@ -22,7 +22,7 @@ train:
   loader_mode: gpu_cached
   compile_model: true
   grad_clip: 1.0
-  
+
 optim:
   lr: 3e-4
   weight_decay: 0.01
@@ -41,4 +41,4 @@ hydra:
     params:
       model.q_conditioning: token,broadcast_cat,film
       model.patch_size: 5,15
-      train.seed: 0,1,2,3,4
+      train.seed: 0,1,2
