@@ -16,7 +16,7 @@ class DataConfig:
 
 @dataclass
 class ModelConfig:
-    # Models must run on the batch alone: `model(**batch)`. Static
+    # Models must run on the batch alone: `model(batch)`. Static
     # forward behaviour is a field on the model config; a callback that
     # needs a different forward (traces, t_override) calls the model
     # itself.

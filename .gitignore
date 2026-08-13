@@ -7,5 +7,7 @@ __pycache__/
 debug.log
 TODO.md
 /notebooks/
+/soq-notebooks/
+/sqoop-notebooks/
 *.zip
 /legacy_models/

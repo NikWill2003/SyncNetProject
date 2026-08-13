@@ -85,7 +85,8 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
             if b_idx >= self.max_batches:
                 break
             out = model(
-                batch['images'], batch['questions'], t_override=t
+                {'images': batch['images'], 'questions': batch['questions']},
+                t_override=t,
             )
             pred = out['logits'].argmax(-1)
             correct += (pred == batch['answers']).sum().item()

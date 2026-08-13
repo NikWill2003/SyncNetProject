@@ -1,0 +1,45 @@
+# @package _global_
+# The no-routing floor from Bahdanau et al. Its rhs curve is the
+# comparison the syncnet curve is a delta against: a flat-and-low curve
+# here with a rising one there is the compositionality claim.
+defaults:
+  - override /model: sqoop/conv_lstm
+
+model:
+  emb_dim: 32
+  lstm_hidden: 128
+  hidden_dim: 256
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000   # fixed budget; cosine must complete
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+# SEEDS: 1 per cell -- a shakedown budget, not a measurement. Enough to
+# gauge throughput, memory and whether an arm trains at all. At the
+# observed sigma=0.022 a single seed cannot rank arms or resolve the
+# shape of an rhs curve; raise to 5 for screening and 15 for anything
+# that goes in the thesis.
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset.rhs_variety: 1,2,4,8,18
+      train.seed: 0

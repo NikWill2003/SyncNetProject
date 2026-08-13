@@ -1,6 +1,5 @@
 defaults:
   - sort_of_clevr_syncnet_base
-  - encoder: patchify
   - _self_
 
 name: sort_of_clevr_syncnet

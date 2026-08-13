@@ -26,10 +26,11 @@ import torch.nn as nn
 from omegaconf import MISSING
 
 from ....core.config import ModelConfig
-from ....core.encoders import (
+from ....models.encoders import (
     PatchifyEncoder, CNNEncoder, EncoderConfig,
     PatchifyEncoderConfig, CNNEncoderConfig,
 )
+from ..contracts import SqoopBatch
 # SQOOP wraps the Sort-of-CLEVR models: the same architecture, with the
 # [x, rel, y] token triple embedded and flattened into the question
 # vector the inner model expects.
@@ -69,10 +70,10 @@ class SqoopAdapter(nn.Module):
         return getattr(self.inner, 'has_rotors', False)
 
     def forward(
-            self, images: torch.Tensor, questions: torch.Tensor, **kwargs
+            self, batch: SqoopBatch, **kwargs
             ) -> SqoopOutput:
-        q = self.embed(questions).flatten(1)  # (B, 3*emb)
-        return self.inner(images, q, **kwargs)
+        q = self.embed(batch['questions']).flatten(1)  # (B, 3*emb)
+        return self.inner(batch['images'], q, **kwargs)
 
 
 def _adapted_config(base_config_cls, model_name: str):
@@ -192,10 +193,10 @@ class SqoopConvLSTM(nn.Module):
         )
 
     def forward(
-            self, images: torch.Tensor, questions: torch.Tensor, **kwargs
+            self, batch: SqoopBatch, **kwargs
             ) -> SqoopOutput:
-        feats = self.encoder(images) + self.pos_emb          # (B, ch, H, W)
-        _, (h_n, _) = self.lstm(self.embed(questions))       # (1, B, Hq)
+        feats = self.encoder(batch['images']) + self.pos_emb          # (B, ch, H, W)
+        _, (h_n, _) = self.lstm(self.embed(batch['questions']))       # (1, B, Hq)
         B, _, H, W = feats.shape
         q_map = h_n[0].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)
         fused = self.fuse(torch.cat([feats, q_map], dim=1))
@@ -247,10 +248,9 @@ class SqoopQuestionOnly(nn.Module):
         layers.append(nn.Linear(d, ANSWER_SIZE))
         self.net = nn.Sequential(*layers)
 
-    def forward(self, images: torch.Tensor, questions: torch.Tensor,
+    def forward(self, batch: SqoopBatch,
                 **kwargs) -> SqoopOutput:
-        del images  # deliberately unused
-        return {'logits': self.net(self.embed(questions).flatten(1))}
+        return {'logits': self.net(self.embed(batch['questions']).flatten(1))}
 
     @classmethod
     def from_config(cls, cfg: 'SqoopQuestionOnlyConfig',

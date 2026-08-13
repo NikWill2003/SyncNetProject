@@ -74,7 +74,8 @@ class sort_of_clevr_sync_metrics_callback(BaseCallBack):
         metrics: dict[str, float] = {}
 
         with torch.inference_mode():
-            out = model(images, questions, return_trace=True)
+            b = {'images': images, 'questions': questions}
+            out = model(b, return_trace=True)
 
             traces = out['traces']
             attn_key = 'attn'
@@ -104,7 +105,7 @@ class sort_of_clevr_sync_metrics_callback(BaseCallBack):
                 if getattr(model, 'has_rotors', False)
                 else {'scramble_state': True}
             )
-            out_s = model(images, questions, **scramble_kwarg)
+            out_s = model(b, **scramble_kwarg)
 
             acc = (
                 out['logits'].argmax(-1) == answers

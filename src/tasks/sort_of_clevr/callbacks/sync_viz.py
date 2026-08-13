@@ -96,7 +96,10 @@ class sort_of_clevr_sync_viz_callback(BaseCallBack):
         self._last_rendered_step = step
 
         with torch.inference_mode():
-            out = model(images, questions, return_trace=True)
+            out = model(
+                {'images': images, 'questions': questions},
+                return_trace=True,
+            )
 
         traces = out['traces']
         state_key = 'rotors' if 'rotors' in traces else 'state'

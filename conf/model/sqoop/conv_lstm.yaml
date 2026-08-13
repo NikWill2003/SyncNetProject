@@ -1,9 +1,14 @@
 defaults:
   - sqoop_conv_lstm_base
-  - encoder: cnn
   - _self_
 
+# Bahdanau et al.'s no-routing floor
 name: sqoop_conv_lstm
 emb_dim: 32
 lstm_hidden: 128
 hidden_dim: 256
+
+encoder:
+  name: cnn
+  ch: 128
+  hidden: 64
