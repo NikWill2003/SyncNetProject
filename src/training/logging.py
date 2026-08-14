@@ -90,11 +90,12 @@ def accelerate_init_wandb(
     if cfg.wandb.project_name is None:
         raise ValueError('project name must be specified when wandb is enabled')
     
-    dict_cfg = dict[str, Any], OmegaConf.to_container(cfg, resolve=True) 
+    dict_cfg : dict[str, Any] = OmegaConf.to_container(cfg, resolve=True) # type: ignore
     dict_cfg['n_params'] = get_param_count(model) # type: ignore
 
     choices = HydraConfig.get().runtime.choices
-    if experiemnt := choices.get('experiment'): dict_cfg['experiment'] = experiemnt # type: ignore
+    if experiemnt := choices.get('experiment'): 
+        dict_cfg['experiment'] = experiemnt # type: ignore
 
     accelerator.init_trackers(
         project_name=cfg.wandb.project_name,

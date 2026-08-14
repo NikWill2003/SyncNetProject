@@ -150,7 +150,8 @@ def build_dataloaders(
     test_path = data_dir_path / 'test.npz'
 
     if not all(path.exists() for path in [train_path, val_path, test_path]):
-        raise ValueError('missing dataset files run prepare script')
+        from generator import prepare_sort_of_clevr
+        prepare_sort_of_clevr(cfg.dataset) # type: ignore
     
     if cfg.train.loader_mode == 'gpu_cached':
         return (

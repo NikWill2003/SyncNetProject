@@ -16,7 +16,7 @@ from src import (
 )
 
 from src.core import Config
-from src.training import Trainer, get_wandb_init
+from src.training import Trainer, get_wandb_init, accelerate_init_wandb
 from src.training.utils import set_seed
 
 register_configs()
@@ -49,15 +49,12 @@ def main(cfg: Config) -> float:
     loss_fn = build_loss_fn(cfg)
     callbacks = build_callbacks(cfg)
 
-
     if cfg.wandb.enabled:
         if cfg.wandb.project_name is None:
             raise ValueError('project name must be specified when wandb is enabled')
-        
-        accelerator.init_trackers(
-            project_name=cfg.wandb.project_name,
-            config=OmegaConf.to_container(cfg, resolve=True),  # type: ignore
-            init_kwargs={'wandb': get_wandb_init(cfg, out_dir)},
+
+        accelerate_init_wandb(
+            cfg, accelerator, out_dir, model
         )
 
     try:

@@ -5,10 +5,10 @@ defaults:
 name: sort_of_clevr
 seed: 1              
 root: ./data
-dir: sort-of-clevr
-train_size: 20000 # number of scenes -> total samples num scenes * 3 * nb_questions
+train_size: 36000 # number of scenes -> total samples num scenes * 3 * nb_questions
 test_size: 1000 # val size also
 img_size: 75
 obj_size: 5
 nb_questions: 10 # per subtype per image (x3 subtypes)
 t_subtype: -1 # -1 = random ternary subtype
+dir: ${dataset.name}-seed${dataset.seed}-train${dataset.train_size}-test${dataset.test_size}-img${dataset.img_size}-obj${dataset.obj_size}-q${dataset.nb_questions}-t${dataset.t_subtype}

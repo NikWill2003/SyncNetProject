@@ -10,13 +10,13 @@ class SqoopDataConfig(DataConfig):
     name: str = 'sqoop'
     seed: int = 1
     root: str = './data'
-    dir: str = 'sqoop-rhs18'
+    dir: str = 'sqoop-rhs18-n1080000'
 
-    # systematic split
-    rhs_variety: int = 18          # rhs per lhs seen in train (1..35)
-    num_repeats: int = 80          # train examples per seen pair
-    num_repeats_eval: int = 10     # eval examples per pair
-    max_train_pairs: int = 0       # 0 = keep all generated train examples
+    train_size: int = 1_080_000 # total examples
+    test_size: int = 25_600 # total examples
+
+    # systematic split: rhs per lhs seen in train (1..35)
+    rhs_variety: int = 18
 
     # which on-disk splits fill the trainer's eval / test slots.
     # 'val_unseen' exists on disk for diagnostics / a future 4-loader
@@ -24,12 +24,10 @@ class SqoopDataConfig(DataConfig):
     eval_split: str = 'val_seen'
     test_split: str = 'test_unseen'
 
-    # 0 = full train split; >0 = deterministic random subsample (GPU
-    # cache fitting / data-efficiency runs)
-    max_train_examples: int = 0
-
     # scene rendering
     img_size: int = 64
     num_objects: int = 5
     min_obj_size: int = 10
     max_obj_size: int = 15
+
+    

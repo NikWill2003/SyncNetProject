@@ -33,7 +33,7 @@ original exactly. Deviations from the original, all deliberate:
     and the resulting schedule is shuffled once. Bayes-optimal
     question-only accuracy is therefore exactly 0.500 on every split, by
     construction rather than in expectation. Costs a divisibility
-    constraint on num_repeats (see _check_repeats).
+    constraint on the size budgets (see _repeats_for).
  9. Both unbounded `while True` loops are capped. Exhaustion RAISES
     rather than falling back to an easier scene: a fallback would have to
     change the label or the constraint, and either silently re-introduces
@@ -42,6 +42,14 @@ original exactly. Deviations from the original, all deliberate:
     loud.
 10. Optional `restrict_positive` (default False = original semantics).
     See the DISTRACTOR SHAPE ASYMMETRY note in _gen_example.
+11. Split sizes are given as TOTAL examples (train_size, test_size,
+    named to match sort_of_clevr) rather than repeats per pair, so that
+    rhs_variety is a pure pair-variety axis and does not also scale the
+    dataset. test_size applies to each of the three eval splits.
+    Subsampling a built split is deliberately NOT offered: a random
+    subset of a per-cell-balanced schedule is only balanced in
+    expectation, which is exactly the property the question-only control
+    depends on. Build the size you want.
 
 Original quirks kept ON PURPOSE (bit-for-bit semantics parity):
  * `relate('above')` means pos_y > other -- i.e. *lower* on screen with
@@ -123,7 +131,7 @@ class _Object:
         self.size = size
         self.font = _font_for_size(size)
         self.pos = pos
-        self.shape: str|None = shape
+        self.shape: str | None = shape
 
     def overlap(self, other: '_Object') -> bool:
         assert (self.pos is not None) and (other.pos is not None)
@@ -154,7 +162,7 @@ def _get_random_spot(
         rel_holds: bool = False,
         rel_obj: int = 0,
         ) -> _Object | None:
-    assert(all(o.pos is not None for o in objects))
+    assert all(o.pos is not None for o in objects)
     size = int(rng.randint(min_obj, max_obj + 1))
     obj = _Object(size)
 
@@ -188,8 +196,8 @@ def _get_random_spot(
         x = int(rng.randint(min_cx, max_cx))
         y = int(rng.randint(min_cy, max_cy))
         obj.pos = (x, y)
-        if (any(abs(x - o.pos[0]) < 5 for o in objects) or #type: ignore
-                any(abs(y - o.pos[1]) < 5 for o in objects)): #type: ignore
+        if (any(abs(x - o.pos[0]) < 5 for o in objects) or  # type: ignore
+                any(abs(y - o.pos[1]) < 5 for o in objects)):  # type: ignore
             continue
         if any(obj.overlap(o) for o in objects):
             continue
@@ -248,14 +256,14 @@ def _fill_scene(
 
 
 def _draw(objects: list[_Object], img_size: int) -> np.ndarray:
-    assert(all(o.pos is not None for o in objects))
+    assert all(o.pos is not None for o in objects)
 
     img = Image.new('RGB', (img_size, img_size))
     for obj in objects:
         assert (obj.pos is not None) and (obj.shape is not None)
         glyph = Image.new('RGBA', (obj.size + 4, obj.size + 4))
         d = ImageDraw.Draw(glyph)
-        _, t, _, _ = obj.font.getbbox(obj.shape) 
+        _, t, _, _ = obj.font.getbbox(obj.shape)
         d.text((0, -t), obj.shape, font=obj.font, fill='green')
         img.paste(
             glyph,
@@ -349,15 +357,27 @@ def _gen_example(
     return _draw(scene, img_size), encode_question(x, rel, y), int(label)
 
 
-def _check_repeats(repeats: int, name: str) -> None:
-    if repeats <= 0 or repeats % _REPEAT_STEP:
+def _repeats_for(target: int, n_pairs: int, label: str) -> int:
+    """Per-pair repeat count realising a TOTAL example budget.
+
+    Rounded down to a multiple of _REPEAT_STEP so every (pair, rel) cell
+    still splits into equal positive and negative halves; the realised
+    total therefore lands at or just under `target`, by at most
+    n_pairs * (_REPEAT_STEP - 1) examples.
+    """
+    if target <= 0:
+        raise ValueError(f'{label} must be positive, got {target}')
+    if n_pairs <= 0:
+        raise ValueError(f'{label}: no pairs to distribute over')
+    repeats = (target // n_pairs)
+    repeats -= repeats % _REPEAT_STEP
+    if repeats <= 0:
         raise ValueError(
-            f'{name}={repeats} must be a positive multiple of '
-            f'{_REPEAT_STEP} (= 2 labels x {len(RELATIONS)} relations). '
-            'Each (pair, rel) cell has to split into equal positive and '
-            'negative halves; anything else leaves a per-question class '
-            'skew that a question-only model can exploit.'
+            f'{label}={target:,} over {n_pairs} pairs leaves under '
+            f'{_REPEAT_STEP} examples per pair, which cannot be balanced. '
+            f'Raise it to at least {n_pairs * _REPEAT_STEP:,}.'
         )
+    return repeats
 
 
 def _build_schedule(
@@ -482,38 +502,28 @@ def prepare_sqoop(data_cfg: SqoopDataConfig) -> None:
             unseen.remove((x, y))
             train_pairs_unique.append((x, y))
 
-    # ------------------------------------------------- repeat budgets
-    repeats = int(cfg.num_repeats)
-    _check_repeats(repeats, 'num_repeats')
-
-    # max_train_pairs now caps the *per-pair repeat count* rather than
-    # truncating a shuffled example list. Truncation after shuffling
-    # would slice cells apart and undo the balance guarantee.
-    max_train = int(cfg.max_train_pairs)
-    if max_train > 0:
-        cap = max_train // max(len(train_pairs_unique), 1)
-        cap -= cap % _REPEAT_STEP
-        if cap <= 0:
-            raise ValueError(
-                f'max_train_pairs={max_train} leaves under {_REPEAT_STEP} '
-                f'examples per pair across {len(train_pairs_unique)} '
-                'training pairs, which cannot be balanced.'
-            )
-        if cap < repeats:
-            print(
-                f'max_train_pairs={max_train}: reducing num_repeats '
-                f'{repeats} -> {cap} (kept a multiple of {_REPEAT_STEP})'
-            )
-            repeats = cap
-
-    repeats_eval = int(cfg.num_repeats_eval)
-    _check_repeats(repeats_eval, 'num_repeats_eval')
-
     left = sorted(unseen)
     py_rng.shuffle(left)
     val_slice = len(left) // 2
     val_unseen_pairs = left[:val_slice]
     test_unseen_pairs = left[val_slice:]
+
+    # ------------------------------------------------- size budgets
+    # Sizes are specified as TOTAL examples per split, not as repeats
+    # per pair. Under a per-pair budget the training set grows linearly
+    # with rhs_variety, so an rhs curve confounds "more pair variety"
+    # with "more data" -- and more data is the explanation a reader
+    # reaches for first. A total budget makes rhs a pure variety axis.
+    n_train = int(cfg.train_size)
+    n_eval = int(cfg.test_size)
+
+    repeats = _repeats_for(n_train, len(train_pairs_unique), 'train_size')
+    rep_seen = _repeats_for(n_eval, len(train_pairs_unique),
+                            'test_size (val_seen)')
+    rep_val = _repeats_for(n_eval, len(val_unseen_pairs),
+                           'test_size (val_unseen)')
+    rep_test = _repeats_for(n_eval, len(test_unseen_pairs),
+                            'test_size (test_unseen)')
 
     sched_rng = np.random.RandomState(base_seed)
     schedules = {
@@ -523,22 +533,23 @@ def prepare_sqoop(data_cfg: SqoopDataConfig) -> None:
         ),
         # deviation 2: fresh scenes over *seen* pairs, for early stopping
         'val_seen': (
-            _build_schedule(train_pairs_unique, repeats_eval, sched_rng),
+            _build_schedule(train_pairs_unique, rep_seen, sched_rng),
             base_seed + 2,
         ),
         'val_unseen': (
-            _build_schedule(val_unseen_pairs, repeats_eval, sched_rng),
+            _build_schedule(val_unseen_pairs, rep_val, sched_rng),
             base_seed + 3,
         ),
         'test_unseen': (
-            _build_schedule(test_unseen_pairs, repeats_eval, sched_rng),
+            _build_schedule(test_unseen_pairs, rep_test, sched_rng),
             base_seed + 4,
         ),
     }
 
     print(
         f'sqoop rhs={rhs}: {len(train_pairs_unique)} train pairs '
-        f'({len(schedules["train"][0])} train ex at {repeats}/pair), '
+        f'({len(schedules["train"][0]):,} train ex at {repeats}/pair, '
+        f'target {n_train:,}), '
         f'{len(left)} unseen pairs '
         f'({len(schedules["val_unseen"][0])} val_unseen / '
         f'{len(schedules["test_unseen"][0])} test_unseen ex), '
@@ -556,14 +567,18 @@ def prepare_sqoop(data_cfg: SqoopDataConfig) -> None:
             max_obj=int(cfg.max_obj_size),
             restrict_positive=restrict_positive,
         )
-        np.savez_compressed(out_dir / f'{name}.npz', allow_pickle=True, **arrays)
+        np.savez_compressed(
+            out_dir / f'{name}.npz', allow_pickle=True, **arrays
+        )
         print(f'saved {name}.npz to {out_dir}')
 
-    # manifest (handles dataclass and DictConfig inputs -- past fix)
     if is_dataclass(cfg):
         manifest = asdict(cfg)
     else:
         manifest = OmegaConf.to_container(cfg, resolve=True)
-    manifest['restrict_positive'] = restrict_positive # type: ignore
-    manifest['num_repeats_effective'] = repeats # type: ignore
+    manifest['restrict_positive'] = restrict_positive  # type: ignore
+    manifest['repeats_per_pair_effective'] = repeats  # type: ignore
+    manifest['train_size_realised'] = (  # type: ignore
+        len(schedules['train'][0])
+    )
     OmegaConf.save(OmegaConf.create(manifest), out_dir / 'manifest.yaml')

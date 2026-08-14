@@ -3,23 +3,18 @@ defaults:
   - _self_
 
 name: sqoop
-seed: 1
+seed: 0
 root: ./data
-# dir tracks rhs so every #rhs variant is its own dataset on disk
-dir: sqoop-rhs${dataset.rhs_variety}
+dir: ${dataset.name}-seed${dataset.seed}-train${dataset.train_size}-test${dataset.test_size}-rhs${dataset.rhs_variety}-img${dataset.img_size}-objs${dataset.num_objects}-minobj${dataset.min_obj_size}-maxobj${dataset.max_obj_size}
+
+# total examples:
+train_size: 1_080_000
+test_size: 25_600
 
 rhs_variety: 18
-# both must be positive multiples of 8 (2 labels x 4 relations): the
-# generator gives every (pair, rel) cell an exact 50/50 label split, and
-# that is what pins the question-only control at 0.500
-num_repeats: 80          # train examples = 36 * rhs * num_repeats
-num_repeats_eval: 8
-max_train_pairs: 0
 
-eval_split: val_seen     # early stopping must not peek at unseen pairs
+eval_split: val_seen # early stopping must not peek at unseen pairs
 test_split: test_unseen
-
-max_train_examples: 0
 
 img_size: 64
 num_objects: 5

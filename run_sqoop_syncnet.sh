@@ -6,10 +6,6 @@ set -uo pipefail
 # this noise, and the rhs curve is the single result most sensitive to a
 # per-question class skew.
 
-for RHS in 1 2 4 8 18; do
-  python prepare_dataset.py task=sqoop dataset.rhs_variety=$RHS
-done
-
 # ------------------------------------------------- 1. CONDITIONING
 # 6 runs at rhs=18. Sets q_conditioning for everything below; edit the
 # winner into communication.yaml, dynamics.yaml and rhs.yaml.
