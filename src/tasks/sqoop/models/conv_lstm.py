@@ -33,5 +33,7 @@ class SqoopConvLSTM(ImageQuestionAdapter):
             answer_dim=C.ANSWER_SIZE,
             lstm_hidden=int(cfg.lstm_hidden),
             hidden_dim=int(cfg.hidden_dim),
+            use_pos_emb=bool(cfg.use_pos_emb),
+            readout=str(cfg.readout),
         )
         return cls(inner)

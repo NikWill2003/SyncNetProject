@@ -520,10 +520,31 @@ def prepare_sqoop(data_cfg: SqoopDataConfig) -> None:
     repeats = _repeats_for(n_train, len(train_pairs_unique), 'train_size')
     rep_seen = _repeats_for(n_eval, len(train_pairs_unique),
                             'test_size (val_seen)')
-    rep_val = _repeats_for(n_eval, len(val_unseen_pairs),
-                           'test_size (val_unseen)')
-    rep_test = _repeats_for(n_eval, len(test_unseen_pairs),
-                            'test_size (test_unseen)')
+
+    # rhs_variety = 35 is the IID control: every one of the 36*35 ordered
+    # pairs is a training pair, so there is nothing held out and the
+    # unseen splits do not exist. That is the point -- it measures task
+    # difficulty with the systematic component removed, which is what
+    # separates "cannot do the relation" from "cannot generalise across
+    # pairs". Both eval and test then have to read val_seen.
+    iid = not val_unseen_pairs and not test_unseen_pairs
+    if iid:
+        for slot, name in (('eval_split', cfg.eval_split),
+                           ('test_split', cfg.test_split)):
+            if name != 'val_seen':
+                raise ValueError(
+                    f'rhs_variety={rhs} leaves no unseen pairs (IID control), '
+                    f'so {slot}={name!r} cannot be built. Set '
+                    f'dataset.{slot}=val_seen.'
+                )
+        print(f'sqoop rhs={rhs}: IID control -- no held-out pairs, '
+              'building train and val_seen only')
+        rep_val = rep_test = 0
+    else:
+        rep_val = _repeats_for(n_eval, len(val_unseen_pairs),
+                               'test_size (val_unseen)')
+        rep_test = _repeats_for(n_eval, len(test_unseen_pairs),
+                                'test_size (test_unseen)')
 
     sched_rng = np.random.RandomState(base_seed)
     schedules = {
@@ -536,23 +557,24 @@ def prepare_sqoop(data_cfg: SqoopDataConfig) -> None:
             _build_schedule(train_pairs_unique, rep_seen, sched_rng),
             base_seed + 2,
         ),
-        'val_unseen': (
+    }
+    if not iid:
+        schedules['val_unseen'] = (
             _build_schedule(val_unseen_pairs, rep_val, sched_rng),
             base_seed + 3,
-        ),
-        'test_unseen': (
+        )
+        schedules['test_unseen'] = (
             _build_schedule(test_unseen_pairs, rep_test, sched_rng),
             base_seed + 4,
-        ),
-    }
+        )
 
     print(
         f'sqoop rhs={rhs}: {len(train_pairs_unique)} train pairs '
         f'({len(schedules["train"][0]):,} train ex at {repeats}/pair, '
         f'target {n_train:,}), '
         f'{len(left)} unseen pairs '
-        f'({len(schedules["val_unseen"][0])} val_unseen / '
-        f'{len(schedules["test_unseen"][0])} test_unseen ex), '
+        f'({len(schedules["val_unseen"][0]) if not iid else 0} val_unseen / '
+        f'{len(schedules["test_unseen"][0]) if not iid else 0} test_unseen ex), '
         f'{len(schedules["val_seen"][0])} val_seen ex; '
         f'restrict_positive={restrict_positive}'
     )

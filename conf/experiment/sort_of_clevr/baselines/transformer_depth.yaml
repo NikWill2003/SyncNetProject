@@ -4,9 +4,9 @@ defaults:
   - override /model: sort_of_clevr/transformer
 
 model:
+  patch_size: 15   # 5x5=25 tokens; patch 5 gives 225 and is 3.9x slower
   patch_emb_dim: 96
   hidden_dim: 128
-  patch_size: 5
   n_heads: 4
   ffn_mult: 4
   dropout: 0.0
@@ -14,13 +14,15 @@ model:
   q_conditioning: broadcast_cat
 
 train:
-  n_steps: 100000
+  # Matched to the SQOOP broad pass: bs 256 x 100k steps over
+  # 36,000 x 3 x 10 = 1,080,000 examples = 23.7 epochs, the same figure
+  # SQOOP runs at. READ train_loss/cross_entropy BEFORE ACCURACY.
+  n_steps: 100_000
   train_bs: 256
   val_bs: 1024
-  early_stop_patience: 1000000 # no early stopping
+  early_stop_patience: 1_000_000
   mixed_precision: bf16
   loader_mode: gpu_cached
-  compile_model: true
   grad_clip: 1.0
 
 optim:
@@ -35,10 +37,17 @@ logging:
   train_log_interval: 500
   save_best: true
 
+# 1 seed, matching the SQOOP broad pass. At sigma=0.022 that ranks
+# nothing; it screens which arms are worth spending seeds on. Note
+# test_size=1000 scenes gives 30,000 eval questions (~3,300 per subtype),
+# roughly 5x the old 200-scene split, so sigma should now be smaller than
+# the 0.022 measured before -- re-estimate it from these runs before
+# choosing the seed count for the focused pass.
+
 hydra:
   mode: MULTIRUN
   sweeper:
     params:
       model.share_layer_weights: true,false
       model.n_layers: 2,4,6
-      train.seed: 0,1,2
+      train.seed: 0
