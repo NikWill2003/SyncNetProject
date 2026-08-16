@@ -1,0 +1,48 @@
+# @package _global_
+# SYNCNET RHS CURVE, 3 SEEDS -- 15 runs.
+#
+# The headline SQOOP comparison currently rests on ONE run per point:
+# conv_lstm beats the syncnet at every rhs with no crossover
+# (0.709/0.925/0.956/0.999/0.993 vs 0.596/0.677/0.779/0.823/0.846).
+# That is a large gap, but a five-point curve drawn through single runs
+# cannot show whether its SHAPE is real -- and the shape is the claim.
+# Three seeds gives an error bar at each point.
+defaults:
+  - override /model: sqoop/syncnet
+
+model:
+  q_conditioning: film
+  partition: quadrant
+  gate_mode: phase
+  readout_mode: sum
+  n_modules: 4
+  module_dim: 128
+  T: 6
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset.rhs_variety: 1,2,4,8,18
+      train.seed: 0,1,2

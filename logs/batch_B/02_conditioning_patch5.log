@@ -1,0 +1,8 @@
+Could not override 'hydra.sweeper.params.model.patch_size'.
+To append to your config use +hydra.sweeper.params.model.patch_size=5
+Key 'model' is not in struct
+    full_key: hydra.sweeper.params.model
+    reference_type=Optional[Dict[str, str]]
+    object_type=dict
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
