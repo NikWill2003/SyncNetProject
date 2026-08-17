@@ -1,0 +1,66 @@
+# @package _global_
+# THE TOPOLOGY-CHANGE EXPERIMENT -- 15 runs, ~5.5 h. THE ONLY EXPERIMENT IN
+# THE PROJECT THAT CAN COME OUT POSITIVE.
+#
+# THE PREDICTION, IN FALSIFIABLE FORM
+#   A scalar phase gate (osc_dim=2, i.e. one angle per module) can only
+#   express coalitions that are realisable on the circle. A FRUSTRATED graph
+#   -- one whose required "who talks to whom" pattern has no consistent
+#   assignment of angles -- should therefore be unreachable, and raising the
+#   oscillator dimension should repair it.
+#
+#   The rho ladder in the N=4 data is already verified and is exactly this,
+#   quantified:
+#       STAR_A   rho(d=2) = 0.408   rho(d=3) = 0.021
+#       every other graph      0.003 - 0.015 at BOTH dimensions
+#
+#   So the prediction is sharp and one-sided: at osc_dim=2 the phase gate
+#   should fail ON STARS AND ONLY ON STARS, and osc_dim=3 should repair it
+#   while doing nothing anywhere else. osc_dim=4 is the "did it keep helping"
+#   control -- if 4 helps everywhere, the story is capacity, not topology.
+#
+# THIS IS A PER-GRAPH RESULT. The overall accuracy is dominated by free steps
+# (61% of steps are a free copy in iid mode) and will hide the effect
+# completely. Read the per-graph metrics the coalitions callback emits, and
+# plot accuracy-vs-rho(d=2) with one point per graph.
+#
+# WHAT KILLS THE CLAIM
+#   * osc_dim=2 fails on non-star graphs too -> not topology, just capacity
+#   * osc_dim=3 helps uniformly              -> not topology, just capacity
+#   * osc_dim=2 already matches oracle on stars -> no frustration to relieve
+# Any of those is a clean negative and should be reported as one.
+defaults:
+  - override /model: coalitions/phase
+
+model:
+  gate: phase
+  phase_update: mlp
+  message_proj: shared     # the gate must be the ONLY routing bottleneck
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.osc_dim: 2,3,4
+      train.seed: 0,1,2,3,4

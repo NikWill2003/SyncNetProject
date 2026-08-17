@@ -1,0 +1,56 @@
+# @package _global_
+# LENGTH GENERALISATION -- 12 runs, ~4.2 h.
+#
+# The routing/content decoupling claim says the gate carries WHO talks to
+# whom and the content pathway carries WHAT is said. If that separation is
+# real, a model should hold up when the test episodes are longer than
+# anything it trained on: the coalition structure is the same, only the
+# number of steps changes. A content-memorising model should fall over.
+#
+# T_train 32 -> T_test 64.
+#
+# !!! DATASET DIR HAZARD -- READ BEFORE RUNNING !!!
+# conf/dataset/coalitions/default.yaml sets
+#       dir: coalitions_${dataset.family}
+# i.e. the cache key encodes ONLY the family. Unlike the SQOOP dataset, whose
+# dir encodes every field, changing T_test / T_train / train_size / K /
+# stream_mode / command_mode here does NOT change the directory, so the
+# generator finds a cache hit and you silently train and evaluate on the OLD
+# data. That is why this file sets `dataset.dir` explicitly. Do the same for
+# any other config that changes a coalitions data field, and consider fixing
+# the template to interpolate every field the way sqoop's does.
+defaults:
+  - override /model: coalitions/phase
+
+dataset:
+  dir: coalitions_${dataset.family}_T${dataset.T_train}to${dataset.T_test}
+  T_train: 32
+  T_test: 64
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.gate: oracle,mlp,attention,phase
+      train.seed: 0,1,2

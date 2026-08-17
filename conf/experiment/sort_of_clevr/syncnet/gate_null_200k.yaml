@@ -1,0 +1,64 @@
+# @package _global_
+# IS EVERY SORT-OF-CLEVR NUMBER A TRUNCATION ARTEFACT? -- 10 runs, ~4.2 h.
+#
+# 86% of Sort-of-CLEVR runs peak in the final 10% of the budget, and of the
+# runs that learned, the median best_step is 98% of budget. warmup_cosine
+# anneals the LR to ~6e-9 at n_steps, so "still improving at the buzzer" and
+# "the schedule ran out" are indistinguishable at 100k. If the arms are still
+# separating at 100k, the gate null is a statement about a truncated run.
+#
+# This doubles the budget on the two arms the null actually turns on -- the
+# thesis mechanism (phase) and the no-learned-gating control (frozen) -- at
+# full 5-seed power. Everything else is held at the gate_null settings.
+#
+#   200k reproduces the 100k ordering and margins  -> the null is real, cite
+#                                                     both budgets, done.
+#   arms separate at 200k                          -> the 100k null is
+#                                                     underpowered in TIME,
+#                                                     not in seeds, and the
+#                                                     whole SOC table needs
+#                                                     rerunning at 200k.
+#
+# Run this EARLY in the batch: it is the one result the thesis currently
+# rests on, and finding out it is budget-limited on the last night would be
+# expensive.
+defaults:
+  - override /model: sort_of_clevr/syncnet
+
+model:
+  q_conditioning: film
+  partition: quadrant
+  readout_mode: sum
+  n_modules: 4
+  module_dim: 128
+  T: 6
+  encoder:
+    patch_size: 5
+
+train:
+  n_steps: 200_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.gate_mode: phase,frozen
+      train.seed: 0,1,2,3,4

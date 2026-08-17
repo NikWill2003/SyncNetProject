@@ -1,0 +1,46 @@
+# @package _global_
+# CAPACITY CONTROL -- 18 runs, ~5.5 h.
+#
+# The exact control that saved the SQOOP chapter from an over-claim: there,
+# module_dim 128 -> 768 (0.39M -> 3.2M) moved train accuracy 0.909 -> 0.9997
+# and test 0.846 -> 0.873, which is what established that the gap was
+# architectural rather than capacity.
+#
+# Do the same here BEFORE claiming any gate ordering. Gates differ in
+# parameter count as well as in mechanism (attention carries key/query
+# projections that phase does not), so a gate ordering that tracks total
+# parameters is not a result about routing.
+#
+# If accuracy tracks hidden_dim rather than gate, the coalition story is doing
+# no work and the honest write-up says so.
+defaults:
+  - override /model: coalitions/phase
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.gate: phase,attention,oracle
+      model.hidden_dim: 32,64,128
+      train.seed: 0,1

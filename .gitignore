@@ -11,3 +11,7 @@ TODO.md
 /sqoop-notebooks/
 *.zip
 /legacy_models/
+/logs/
+/legacy/
+/figures/
+*.ipynb

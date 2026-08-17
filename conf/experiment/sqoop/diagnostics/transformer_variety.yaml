@@ -1,0 +1,70 @@
+# @package _global_
+# VARIETY BISECT (hypothesis H2) -- 3 runs, ~45 min + 3 dataset builds.
+#
+# rhs=35 is the ONLY setting in which the SQOOP transformer has ever learned
+# anything (0.672/0.673), and iid_control.yaml is a PERFECTLY MATCHED control:
+# it carries no `model:` block, so it runs the sqoop/transformer defaults, and
+# its optim/train blocks are identical to the rhs=18 cells. One run therefore
+# already controls capacity, lr, warmup, precision, readout, conditioning,
+# encoder, patch size, clipping, weight decay and step budget -- all of them
+# were held fixed while the model went from ln2 to 0.672.
+#
+# So the cause lives in the training DISTRIBUTION. This file asks whether the
+# effect is continuous in pair variety or a property of the rhs=35 code path.
+#
+# rhs=34 is the largest variety that still takes the ORDINARY path: 1,224 of
+# 1,260 pairs in train, 36 unseen pairs, val_unseen/test_unseen both built
+# (18 pairs each, _repeats_for(25600, 18) = 1,416 -- fine). rhs=35 alone trips
+# `iid = not val_unseen_pairs`.
+#
+#   rhs 24/30/34 escape ln2  -> continuous in variety. Bisect for the knee and
+#                               report it; that is a real finding about what an
+#                               attention baseline needs on a systematic split.
+#   only rhs=35 escapes      -> the "exception" is the IID code path, not
+#                               variety. There is nothing to explain and the
+#                               SQOOP chapter is three clean negatives.
+#
+# NOTE: each rhs is a fresh ~40 min, 0.6 GB dataset build. Run the matching
+# question_only gate first at each rhs (2 min) -- it warms the cache AND gives
+# you the leakage control you have to report anyway.
+defaults:
+  - override /model: sqoop/transformer
+
+model:
+  emb_dim: 32
+  q_conditioning: broadcast_cat
+  patch_emb_dim: 96
+  patch_size: 8
+  hidden_dim: 128
+  n_heads: 4
+  n_layers: 4
+  ffn_mult: 4
+  dropout: 0.0
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 250
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset.rhs_variety: 24,30,34
+      train.seed: 0

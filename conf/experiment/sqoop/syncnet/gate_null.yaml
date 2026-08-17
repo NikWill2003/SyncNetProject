@@ -1,0 +1,60 @@
+# @package _global_
+# GATE NULL ON A SECOND TASK, 5 SEEDS -- 25 runs, ~6.2 h.
+#
+# The Sort-of-CLEVR gate null is the best-powered result in the project:
+# at partition=quadrant all five gate modes fell inside 0.024 ternary,
+# phase vs frozen +0.009 (Welch t=1.14, p=0.29), while phase_R was 0.885
+# for phase and 0.450 for everything else -- the oscillators synchronise
+# and it buys nothing. The partition is worth +0.082 on its own.
+#
+# A null on ONE task is a null about that task. Replicating it on SQOOP --
+# a different image distribution, a different question format, a
+# systematic rather than IID split, and a task where the syncnet loses to
+# a CNN at every rhs -- turns it into a claim about the MECHANISM.
+#
+# This is the single highest-value confirmatory sweep left in the SQOOP
+# chapter, and it needs no new dataset (rhs=18 is already built).
+#
+# Report ternary-equivalent deltas above the SQOOP floor (question_only is
+# exactly 0.5000 by construction) and give phase_R for every arm.
+defaults:
+  - override /model: sqoop/syncnet
+
+model:
+  q_conditioning: film
+  partition: quadrant
+  readout_mode: sum
+  n_modules: 4
+  module_dim: 128
+  T: 6
+
+dataset:
+  rhs_variety: 18
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.gate_mode: phase,attn,mlp,open,frozen
+      train.seed: 0,1,2,3,4
