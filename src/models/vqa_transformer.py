@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from .encoders import PatchifyEncoder
+from .encoders import PatchifyEncoder, build_encoder
 from .pos_enc import PositionalEncoder1D, PositionalEncoder2D
 from .question_encoders import QuestionEncoder
 
@@ -52,9 +52,11 @@ class VQATransformer(nn.Module):
         n_layers: int,
         ffn_mult: int,
         dropout: float,
-        pos_enc: Literal['learnt_1d', 'learnt_2d'],
-        q_conditioning: QCond,
+        pos_enc: str,          # learnt_1d | learnt_2d
+        q_conditioning: str,   # QCond; validated in __init__
         share_layer_weights: bool,
+        readout: str = 'cls',  # cls | mean | flatten
+        encoder: dict | None = None,   # None -> patchify (previous behaviour)
         **kwargs,
     ) -> None:
         super().__init__()
@@ -67,6 +69,9 @@ class VQATransformer(nn.Module):
                 'alias, so sweeps record the arm they actually ran.'
             )
 
+        if readout not in ('cls', 'mean', 'flatten'):
+            raise ValueError(f'readout must be cls|mean|flatten, got {readout!r}')
+        self.readout = readout
         self.n_layers = n_layers
         self.q_conditioning = q_conditioning
         self.share_layer_weights = share_layer_weights
@@ -83,7 +88,33 @@ class VQATransformer(nn.Module):
                 f'patch_size ({patch_size}).'
             )
 
-        self.encoder = PatchifyEncoder(img_size, patch_emb_dim, patch_size)
+        # ENCODER. patchify is a SINGLE strided Conv2d -- a linear projection
+        # of raw pixels per patch. That is ample for sort_of_clevr, whose
+        # objects are six COLOURS and linearly separable from pixels, and
+        # the sort_of_clevr transformer works (ternary 0.867). SQOOP objects
+        # are 36 SHAPES, all the same green, 10-15 px straddling 8 px patch
+        # boundaries -- character recognition, which is not a linear
+        # function of a patch. The one SQOOP model that solves the task
+        # (conv_lstm, 0.999) is also the only one with a multi-layer conv
+        # encoder; the transformer and the syncnet both use patchify and
+        # both sit at ln2 or below.
+        #
+        # Left as None the behaviour is unchanged, so nothing already run
+        # changes meaning.
+        if encoder is None:
+            self.encoder = PatchifyEncoder(img_size, patch_emb_dim, patch_size)
+        else:
+            spec = dict(encoder)
+            spec.setdefault('name', 'patchify')
+            spec.setdefault('ch', patch_emb_dim)
+            if spec['name'] == 'patchify':
+                spec.setdefault('patch_size', patch_size)
+            self.encoder = build_encoder(spec, img_size)
+            if self.encoder.ch != patch_emb_dim:
+                raise ValueError(
+                    f'encoder.ch ({self.encoder.ch}) must equal patch_emb_dim '
+                    f'({patch_emb_dim}); the token width is set by the encoder.'
+                )
 
         q_dim = q_encoder.out_dim
 
@@ -138,6 +169,11 @@ class VQATransformer(nn.Module):
 
         self.cls = nn.Parameter(torch.randn(1, 1, hidden_dim) * 0.02)
 
+        # how many non-patch positions sit at the front of the sequence
+        self.n_prefix = 1 + {
+            'token': 1, 'token_seq': q_encoder.seq_len,
+        }.get(q_conditioning, 0)
+
         layer = nn.TransformerEncoderLayer(
             d_model=hidden_dim,
             nhead=n_heads,
@@ -157,9 +193,25 @@ class VQATransformer(nn.Module):
                 enable_nested_tensor=False,
             )
 
+        # READOUT -- the axis that decides whether SQOOP is solvable at all.
+        #
+        #   cls      one attention-pooled vector. A CLS token is a LEARNED
+        #            POOLING, and on SQOOP every pooled readout measured so
+        #            far sits at exactly ln2 and cannot fit the training
+        #            set: conv_lstm with mean-pooling, and this model at
+        #            0.58M and at 14.4M. The hard negatives put x and y both
+        #            in the scene with the relation holding for some other
+        #            pair, so the answer is not a function of what is
+        #            present -- and a pooled vector is a bag of contents.
+        #   mean     uniform pooling over patch tokens; same objection.
+        #   flatten  every patch position keeps its own weights, which is
+        #            what lets conv_lstm reach 0.999. Costs
+        #            n_tokens x hidden_dim head input.
+        n_patch = self.encoder.n_tokens
+        head_in = hidden_dim * n_patch if readout == 'flatten' else hidden_dim
         self.head = nn.Sequential(
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.LayerNorm(head_in),
+            nn.Linear(head_in, hidden_dim),
             nn.GELU(),
             nn.Linear(hidden_dim, answer_size),
         )
@@ -207,4 +259,9 @@ class VQATransformer(nn.Module):
         else:
             x = self.transformer(x)
 
-        return self.head(x[:, 0])
+        if self.readout == 'cls':
+            return self.head(x[:, 0])
+        patches = x[:, self.n_prefix:]
+        if self.readout == 'mean':
+            return self.head(patches.mean(dim=1))
+        return self.head(patches.flatten(1))

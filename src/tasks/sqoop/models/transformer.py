@@ -39,6 +39,16 @@ class SqoopTransformerConfig(ModelConfig):
 
     share_layer_weights: bool = False
 
+    # cls | mean | flatten -- see VQATransformer. cls is a learned pooling.
+    readout: str = 'cls'
+
+    # patchify = a single strided Conv2d, i.e. a linear projection of raw
+    # pixels per patch. cnn = a multi-layer conv stack. Kept as a plain
+    # string rather than a dict so it is sweepable: a dict literal in a
+    # hydra sweeper line is split on its own commas.
+    encoder_name: str = 'patchify'    # patchify | cnn
+    encoder_hidden: int = 64          # cnn only
+
 
 class SqoopTransformer(ImageQuestionAdapter):
 
@@ -65,5 +75,12 @@ class SqoopTransformer(ImageQuestionAdapter):
             pos_enc=str(cfg.pos_enc),
             q_conditioning=str(cfg.q_conditioning),
             share_layer_weights=bool(cfg.share_layer_weights),
+            readout=str(cfg.readout),
+            encoder=(
+                None if str(cfg.encoder_name) == 'patchify'
+                else {'name': str(cfg.encoder_name),
+                      'ch': int(cfg.patch_emb_dim),
+                      'hidden': int(cfg.encoder_hidden)}
+            ),
         )
         return cls(inner)
