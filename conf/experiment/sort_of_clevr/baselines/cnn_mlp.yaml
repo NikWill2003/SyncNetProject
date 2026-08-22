@@ -1,8 +1,11 @@
 # @package _global_
-# CNN+MLP, the control from Santoro et al. 2017. Expected shape: solves
-# the non-relational family, plateaus well below the others on the
-# relational ones. If it does NOT fail on relational questions, the task
-# is not measuring what it is supposed to.
+# CNN+MLP (Santoro et al. 2017) over the whole question pathway.
+# q_pool x fusion: the two published conv baselines are opposite
+# corners of this grid -- CNN+MLP is mlp/readout, Conv+LSTM is
+# lstm/spatial -- so running the full grid on both tasks turns the
+# question pathway into a measured variable rather than a confound.
+# Expect mlp/readout to solve non-relational and plateau on relational;
+# if it does not fail there, the task is not measuring what it should.
 
 defaults:
   - override /model: sort_of_clevr/cnn_mlp
@@ -28,10 +31,10 @@ logging:
   train_log_interval: 500
   save_best: true
 
-# 1 seed: a screen, not a measurement. READ train_loss/cross_entropy
-# BEFORE ACCURACY.
 hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      train.seed: 0
+      model.q_pool: mlp,lstm
+      model.fusion: readout,spatial
+      train.seed: 0,1,2

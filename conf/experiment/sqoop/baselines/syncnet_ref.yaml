@@ -1,11 +1,16 @@
 # @package _global_
-# Relation Network. Bahdanau et al. report it as not training on
-# SQOOP, so a flat run at ln2 = 0.69315 is consistent with the
-# literature rather than a broken port -- but check
-# train_loss/cross_entropy before concluding either way.
+# The model under test, at claim-grade seed count, in the same table
+# as the baselines.
 
 defaults:
-  - override /model: sqoop/relnet
+  - override /model: sqoop/syncnet
+
+model:
+  partition: quadrant
+  readout_mode: sum
+  q_conditioning: film
+  n_modules: 4
+  module_dim: 128
 
 train:
   n_steps: 100_000
@@ -32,5 +37,4 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      model.pair_spatial: 3,5
-      train.seed: 0,1,2
+      train.seed: 0,1,2,3,4

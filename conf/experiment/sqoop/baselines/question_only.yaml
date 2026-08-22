@@ -1,49 +1,23 @@
 # @package _global_
-# BROAD PASS. Independent of every other config here: nothing in this
-# file is set from another sweep's winner, so these run in any order, in
-# parallel, or alone. Axes not being swept are held at a stated REFERENCE
-# POINT, not a tuned value -- read a result as "effect of this axis at
-# the reference", not as a best achievable number.
-#
-# rhs=18 throughout the broad pass: the easiest systematic split, so most
-# signal per run, and only one dataset to build (~40 min) instead of five
-# (~2.5 h). The rhs curves belong to the focused pass, once these have
-# narrowed the settings.
-#
-# 1 seed. At sigma=0.022 that ranks nothing; it screens which arms are
-# worth spending seeds on.
-#
-# THE GATE, not a baseline. Labels are balanced exactly 50/50 within
-# every (x, rel, y) cell, so Bayes-optimal question-only accuracy is
-# 0.500 by construction. Above ~0.51 means the generator leaks and every
-# other SQOOP number is void. Read this one first.
+# DATA CHECK, not a baseline. Labels are balanced per (x, rel, y)
+# cell, so this must read 0.500 exactly. Anything else means the
+# generator leaks and every number in this pass is void.
+
 defaults:
   - override /model: sqoop/question_only
 
-model:
-  emb_dim: 32
-  hidden_dim: 128
-  n_layers: 2
-
-dataset:
-  rhs_variety: 18
-
 train:
-  # bs 256, 100k steps, train_size 1,080,000 -> 23.7 epochs. The previous
-  # round's 494 epochs came from the 51,840-example datasets, not the
-  # batch size. READ train_loss/cross_entropy BEFORE ACCURACY: if it
-  # reaches 0.0000 the run memorised and its eval numbers mean nothing.
   n_steps: 100_000
   train_bs: 256
   val_bs: 1024
-  early_stop_patience: 1_000_000   # fixed budget; cosine must complete
+  early_stop_patience: 1_000_000
   mixed_precision: bf16
-  loader_mode: gpu_cached          # ~13 GB VRAM at train_size=1,080,000
+  loader_mode: gpu_cached
   grad_clip: 1.0
 
 optim:
   lr: 3e-4
-  weight_decay: 0.01
+  weight_decay: 0.0
   lr_scheduler: warmup_cosine
   lr_scheduler_params:
     warmup_steps: 2_000
@@ -57,4 +31,4 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      train.seed: 0
+      train.seed: 0,1,2

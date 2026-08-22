@@ -1,8 +1,6 @@
 # @package _global_
-# FiLM (Perez et al. 2018), reported per pair-variety by Bahdanau et al.
-# This is the external calibration point SQOOP currently lacks.
-#
-# NOT the same as q_conditioning=film elsewhere -- see the model config.
+# FiLM. The external calibration point SQOOP currently lacks:
+# Bahdanau et al. report per pair-variety error rates for it.
 
 defaults:
   - override /model: sqoop/film
@@ -28,10 +26,9 @@ logging:
   train_log_interval: 500
   save_best: true
 
-# 1 seed: a screen, not a measurement. READ train_loss/cross_entropy
-# BEFORE ACCURACY.
 hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      train.seed: 0
+      model.n_blocks: 2,4,6
+      train.seed: 0,1,2

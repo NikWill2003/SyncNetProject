@@ -1,12 +1,17 @@
 # @package _global_
-# Relation Network (Santoro et al. 2017), the model this dataset was
-# introduced with. Target: above 94% on both families where CNN+MLP
-# plateaus near 63% relational. Reproducing that gap validates the
-# whole pipeline. Conditioning is intrinsic (the question enters each
-# pair inside g_theta), so there is no q_conditioning axis here.
+# Matched-capacity attention comparison at patch 5 (225 tokens).
+# Patch 15 collapses ternary from 0.867 to 0.573, so it measures a
+# regime in which nothing can do the task.
 
 defaults:
-  - override /model: sort_of_clevr/relnet
+  - override /model: sort_of_clevr/transformer
+
+model:
+  patch_size: 5
+  patch_emb_dim: 96
+  hidden_dim: 128
+  n_layers: 4
+  dropout: 0.1
 
 train:
   n_steps: 100_000
@@ -33,5 +38,5 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      model.pair_spatial: 3,5
+      model.q_conditioning: film,broadcast_cat
       train.seed: 0,1,2

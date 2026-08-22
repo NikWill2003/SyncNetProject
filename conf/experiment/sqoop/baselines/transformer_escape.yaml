@@ -1,11 +1,17 @@
 # @package _global_
-# Relation Network. Bahdanau et al. report it as not training on
-# SQOOP, so a flat run at ln2 = 0.69315 is consistent with the
-# literature rather than a broken port -- but check
-# train_loss/cross_entropy before concluding either way.
+# Ten seeds at ONE configuration. The transformer is a seed lottery on
+# this task -- some seeds reach high accuracy, most sit at ln2 -- so
+# the quantity of interest is the FRACTION that escape the chance
+# basin, which needs seeds rather than a sweep.
 
 defaults:
-  - override /model: sqoop/relnet
+  - override /model: sqoop/transformer
+
+model:
+  q_conditioning: broadcast_cat
+  patch_size: 8
+  patch_emb_dim: 96
+  n_layers: 4
 
 train:
   n_steps: 100_000
@@ -32,5 +38,4 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      model.pair_spatial: 3,5
-      train.seed: 0,1,2
+      train.seed: 0,1,2,3,4,5,6,7,8,9

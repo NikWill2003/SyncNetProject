@@ -1,12 +1,17 @@
 # @package _global_
-# Relation Network (Santoro et al. 2017), the model this dataset was
-# introduced with. Target: above 94% on both families where CNN+MLP
-# plateaus near 63% relational. Reproducing that gap validates the
-# whole pipeline. Conditioning is intrinsic (the question enters each
-# pair inside g_theta), so there is no q_conditioning axis here.
+# The model under test, in the same table as the baselines. Frozen
+# shares parameter count, gate function and message pathway with
+# phase, differing only in whether the phases evolve.
 
 defaults:
-  - override /model: sort_of_clevr/relnet
+  - override /model: sort_of_clevr/syncnet
+
+model:
+  partition: quadrant
+  readout_mode: sum
+  q_conditioning: film
+  n_modules: 4
+  module_dim: 128
 
 train:
   n_steps: 100_000
@@ -33,5 +38,5 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      model.pair_spatial: 3,5
+      model.gate_mode: phase,frozen
       train.seed: 0,1,2

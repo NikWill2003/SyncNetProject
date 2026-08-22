@@ -1,8 +1,6 @@
 # @package _global_
-# Relation Network. Bahdanau et al. report it as not training on
-# SQOOP, so a flat run at ln2 = 0.69315 is consistent with the
-# literature rather than a broken port -- but check
-# train_loss/cross_entropy before concluding either way.
+# RelNet at full spatial resolution, one seed. See the Sort-of-CLEVR
+# equivalent: 4096 pairs, roughly 5x the cost.
 
 defaults:
   - override /model: sqoop/relnet
@@ -32,5 +30,5 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      model.pair_spatial: 3,5
-      train.seed: 0,1,2
+      model.pair_spatial: 8
+      train.seed: 0

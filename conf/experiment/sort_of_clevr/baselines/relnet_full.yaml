@@ -1,9 +1,7 @@
 # @package _global_
-# Relation Network (Santoro et al. 2017), the model this dataset was
-# introduced with. Target: above 94% on both families where CNN+MLP
-# plateaus near 63% relational. Reproducing that gap validates the
-# whole pipeline. Conditioning is intrinsic (the question enters each
-# pair inside g_theta), so there is no q_conditioning axis here.
+# RelNet at full spatial resolution. pair_spatial=8 is 4096 pairs and
+# roughly 5x the cost of 5, so it is one seed, run only to check
+# whether the coarse object grid is what limits RelNet here.
 
 defaults:
   - override /model: sort_of_clevr/relnet
@@ -33,5 +31,5 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      model.pair_spatial: 3,5
-      train.seed: 0,1,2
+      model.pair_spatial: 8
+      train.seed: 0
