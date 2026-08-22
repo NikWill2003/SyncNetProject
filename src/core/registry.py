@@ -70,6 +70,13 @@ def get_task(cfg: Config) -> TaskSpec:
 def register_configs() -> None:
     cs = ConfigStore.instance()
 
+    from omegaconf import OmegaConf
+    OmegaConf.register_new_resolver(
+        'join',
+        lambda xs, sep='-': sep.join(str(x) for x in xs),
+        replace=True,
+    )
+
     cs.store(name='config_schema', node=Config)
 
     from ..tasks import TASKS

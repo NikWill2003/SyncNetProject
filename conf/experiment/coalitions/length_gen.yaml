@@ -7,23 +7,14 @@
 # anything it trained on: the coalition structure is the same, only the
 # number of steps changes. A content-memorising model should fall over.
 #
-# T_train 32 -> T_test 64.
-#
-# !!! DATASET DIR HAZARD -- READ BEFORE RUNNING !!!
-# conf/dataset/coalitions/default.yaml sets
-#       dir: coalitions_${dataset.family}
-# i.e. the cache key encodes ONLY the family. Unlike the SQOOP dataset, whose
-# dir encodes every field, changing T_test / T_train / train_size / K /
-# stream_mode / command_mode here does NOT change the directory, so the
-# generator finds a cache hit and you silently train and evaluate on the OLD
-# data. That is why this file sets `dataset.dir` explicitly. Do the same for
-# any other config that changes a coalitions data field, and consider fixing
-# the template to interpolate every field the way sqoop's does.
+# T_train 32 -> T_test 64. No dataset.dir override is needed: the cache-key
+# template in conf/dataset/coalitions/default.yaml interpolates T_train and
+# T_test, so this builds its own directory automatically. (It used to need
+# one, back when dir encoded only the family.)
 defaults:
   - override /model: coalitions/phase
 
 dataset:
-  dir: coalitions_${dataset.family}_T${dataset.T_train}to${dataset.T_test}
   T_train: 32
   T_test: 64
 

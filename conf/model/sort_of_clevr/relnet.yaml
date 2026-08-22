@@ -1,0 +1,22 @@
+defaults:
+  - sort_of_clevr_relnet_base
+  - _self_
+
+# Relation Network (Santoro et al. 2017), the model this dataset was
+# introduced with. Conditioning is intrinsic -- the question enters each
+# pair inside g_theta -- so this model has no q_conditioning axis.
+name: sort_of_clevr_relnet
+
+g_hidden: 256
+g_layers: 4
+f_hidden: 256
+f_dropout: 0.0
+
+# objects are feature-map cells, so cost goes as pair_spatial^4:
+# 5 -> 25 objects, 625 pairs. 8 -> 64 objects, 4096 pairs.
+pair_spatial: 5
+
+encoder:
+  name: cnn
+  ch: 128
+  hidden: 64

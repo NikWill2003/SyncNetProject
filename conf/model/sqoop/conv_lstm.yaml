@@ -5,6 +5,9 @@ defaults:
 # Bahdanau et al.'s no-routing floor
 name: sqoop_conv_lstm
 emb_dim: 32
+q_pool: lstm       # mlp | lstm
+fusion: spatial    # spatial | readout
+
 lstm_hidden: 128
 hidden_dim: 256
 

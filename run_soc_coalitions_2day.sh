@@ -1,53 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Sort-of-CLEVR (steps 1-2, ~9 h) then coalitions (steps 3-9, ~39 h), on
-# one card. Pair with run_sqoop_2day.sh on the other; that one owns every
-# SQOOP dataset and this one owns the SOC and coalitions data, so the two
-# cards cannot race a build (build_dataloaders is not concurrency-safe --
-# two cold jobs on the same dir each build their own copy).
-#
-# WHY COALITIONS IS ON THE SORT-OF-CLEVR CARD
-# Sort-of-CLEVR has ~9 h of work left worth doing: the gate null is
-# finished at 5 seeds and properly powered, and the only open questions
-# are whether it is a truncation artefact and whether the 0.867
-# transformer survives more than one seed. That leaves ~39 h idle, and
-# coalitions has ZERO runs -- it is the only task with temporal, sparse
-# relevance and therefore the only one that can support the
-# topology-change claim POSITIVELY. Delete steps 3-9 if you want this
-# card to stay Sort-of-CLEVR only, but then coalitions never runs.
-#
-# COALITIONS FLOORS -- overall accuracy is dominated by free steps (61%
-# of steps are a free copy in iid mode). ALWAYS report deltas, never raw:
-#   constant 0.233 | copy-own-token 0.757 | NO-COMM ORACLE 0.786
-# A model at or below 0.786 has NOT demonstrated communication.
-#
-# -m appears on lines that override a seed list from the command line. A
-# CLI sweep replaces that key in the yaml's hydra.sweeper.params and is
-# crossed with the remaining axes; without -m hydra rejects the comma
-# list as ambiguous.
-
-# --------------------------------------- 1. IS THE GATE NULL REAL?
-# 10 runs, ~4.2 h. First, because it is the one result the thesis rests
-# on. 86% of Sort-of-CLEVR runs peak in the final 10% of budget and the
-# median best_step of the runs that learned is 98% of budget, while
-# warmup_cosine anneals to ~6e-9 at n_steps -- so "still improving" and
-# "the schedule ran out" are indistinguishable at 100k. This doubles the
-# budget on the two arms the null turns on, at 5 seeds.
-#   reproduces  -> the null is real, cite both budgets, done
-#   separates   -> the null is underpowered in TIME, not seeds, and the
-#                  whole SOC table needs rerunning before anything is
-#                  written
-python main.py experiment=sort_of_clevr/syncnet/gate_null_200k
-
-# ------------------------------------------- 2. SOC TRANSFORMER
-# 5 runs, ~5 h. ternary 0.867 (+0.322 over the 0.545 floor) is the
-# strongest baseline number in the thesis and rests on ONE seed. Patch
-# size dominates this arm -- 0.867 at patch 5 vs 0.573 at patch 15 -- so
-# both are pinned here rather than swept.
-python main.py -m experiment=sort_of_clevr/baselines/transformer_conditioning \
-  model.q_conditioning=film model.patch_size=5 train.seed=0,1,2,3,4
-
 # ===================== COALITIONS -- nothing has ever run here ========
 # The task was blocked by a signature mismatch (CoalitionsBase.forward
 # took (streams, commands, ...) while the Trainer calls model(batch)),

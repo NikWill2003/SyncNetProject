@@ -1,6 +1,8 @@
 from ....core.registry import ModelSpec
 
 from .conv_lstm import SqoopConvLSTM, SqoopConvLSTMConfig
+from .film import SqoopFiLM, SqoopFiLMConfig
+from .relnet import SqoopRelNet, SqoopRelNetConfig
 from .question_only import SqoopQuestionOnly, SqoopQuestionOnlyConfig
 from .syncnet import SqoopSyncNet, SqoopSyncNetConfig
 from .transformer import SqoopTransformer, SqoopTransformerConfig
@@ -13,6 +15,14 @@ MODELS: dict[str, ModelSpec] = {
     'sqoop_conv_lstm': ModelSpec(
         config=SqoopConvLSTMConfig,
         model_class=SqoopConvLSTM,
+    ),
+    'sqoop_film': ModelSpec(
+        config=SqoopFiLMConfig,
+        model_class=SqoopFiLM,
+    ),
+    'sqoop_relnet': ModelSpec(
+        config=SqoopRelNetConfig,
+        model_class=SqoopRelNet,
     ),
     'sqoop_transformer': ModelSpec(
         config=SqoopTransformerConfig,

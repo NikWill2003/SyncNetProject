@@ -1,0 +1,21 @@
+defaults:
+  - sqoop_film_base
+  - _self_
+
+# FiLM (Perez et al. 2018). NOT the same as q_conditioning=film on the
+# transformer and syncnet: that applies one modulation at the encoder
+# output, this applies a separate modulation inside every block.
+name: sqoop_film
+
+n_blocks: 4
+block_ch: 128
+classifier_ch: 512
+classifier_hidden: 1024
+use_coords: true
+
+emb_dim: 32   # question token embedding
+
+encoder:
+  name: cnn
+  ch: 128
+  hidden: 64

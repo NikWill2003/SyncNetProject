@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ....models import ImageQuestionAdapter, TokenEmbedQuestionEncoder
-from ....models.conv_lstm import VQAConvLSTM, VQAConvLSTMConfig
+from ....models.relnet import VQARelNet, VQARelNetConfig
 from ....models.encoders import build_encoder
 from ..config import SqoopDataConfig
 from ..contracts import SqoopOutput, SqoopBatch
@@ -11,31 +11,34 @@ from ..data import constants as C
 
 
 @dataclass
-class SqoopConvLSTMConfig(VQAConvLSTMConfig):
-    name: str = 'sqoop_conv_lstm'
+class SqoopRelNetConfig(VQARelNetConfig):
+    name: str = 'sqoop_relnet'
     emb_dim: int = 32
 
 
-class SqoopConvLSTM(ImageQuestionAdapter):
+class SqoopRelNet(ImageQuestionAdapter):
+    """Relation Network (Santoro et al. 2017). Conditioning is
+    intrinsic -- the question enters each pair inside g_theta -- so
+    this model does not take the q_conditioning axis."""
+
 
     def forward(self, batch: SqoopBatch, **overrides) -> SqoopOutput:
         return super().forward(batch, **overrides)  # type: ignore[return-value]
 
     @classmethod
     def from_config(
-            cls, cfg: SqoopConvLSTMConfig, data_cfg: SqoopDataConfig,
-            ) -> SqoopConvLSTM:
-        inner = VQAConvLSTM(
+            cls, cfg: SqoopRelNetConfig, data_cfg: SqoopDataConfig,
+            ) -> SqoopRelNet:
+        inner = VQARelNet(
             q_encoder=TokenEmbedQuestionEncoder(
                 C.VOCAB_SIZE, C.QUESTION_LEN, int(cfg.emb_dim),
             ),
             encoder=build_encoder(dict(cfg.encoder), int(data_cfg.img_size)),
             answer_dim=C.ANSWER_SIZE,
-            lstm_hidden=int(cfg.lstm_hidden),
-            hidden_dim=int(cfg.hidden_dim),
-            use_pos_emb=bool(cfg.use_pos_emb),
-            readout=str(cfg.readout),
-            q_pool=str(cfg.q_pool),
-            fusion=str(cfg.fusion),
+            g_hidden=int(cfg.g_hidden),
+            g_layers=int(cfg.g_layers),
+            f_hidden=int(cfg.f_hidden),
+            f_dropout=float(cfg.f_dropout),
+            pair_spatial=int(cfg.pair_spatial),
         )
         return cls(inner)

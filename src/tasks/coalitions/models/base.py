@@ -125,7 +125,23 @@ class CoalitionsBase(nn.Module):
         V = torch.einsum('ijmh,bih->bijm', self.Wv, u) + self.bv
         return torch.einsum('bij,bijm->bjm', G, V)
 
-    def forward(
+    def forward(self, batch: dict, **overrides) -> CoalitionsOutput:
+        """The Trainer's calling convention: one positional batch dict.
+
+        Every other task in this repo goes through a task adapter for this;
+        coalitions has no separate shared model to adapt, so the seam lives
+        here. `forward_seq` keeps the tensor-argument signature that the
+        analysis callbacks want (traces, gate_transform, state_transform),
+        and this wrapper is the only thing the Trainer sees.
+        """
+        return self.forward_seq(
+            batch['streams'],
+            batch['commands'],
+            oracle_adj=batch.get('oracle_adj'),
+            **overrides,
+        )
+
+    def forward_seq(
             self,
             streams: torch.Tensor,          # (B, T, N) long
             commands: torch.Tensor,         # (B, T)    long

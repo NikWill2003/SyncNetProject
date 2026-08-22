@@ -1,0 +1,21 @@
+defaults:
+  - sort_of_clevr_cnn_mlp_base
+  - _self_
+
+# CNN+MLP: the control from Santoro et al. 2017 -- answers the
+# non-relational questions, fails the relational ones. Same class as the
+# SQOOP conv baseline, different preset.
+name: sort_of_clevr_cnn_mlp
+
+q_pool: mlp        # mlp | lstm   -- SoC questions are one fixed vector
+fusion: readout    # readout | spatial
+readout: flatten   # flatten | pool
+use_pos_emb: true
+
+lstm_hidden: 128   # width of the pooled question vector under either q_pool
+hidden_dim: 256
+
+encoder:
+  name: cnn
+  ch: 128
+  hidden: 64

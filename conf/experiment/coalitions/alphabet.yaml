@@ -1,0 +1,53 @@
+# @package _global_
+# ROUTING / CONTENT DECOUPLING, ON THE CONTENT AXIS -- 18 runs + 2 builds,
+# ~6 h.
+#
+# Claim two says the gate carries WHO talks to whom and the content pathway
+# carries WHAT is said, and that the two are separable. K is the size of the
+# token alphabet, i.e. how much there is to say. Widening it makes the
+# content problem strictly harder while leaving the coalition structure --
+# the graphs, the schedule, the number of modules -- completely unchanged.
+#
+# So the prediction is specific and falsifiable: gate quality (gate_auc,
+# gate_sep, offpair_leak) should be FLAT in K while token accuracy falls.
+# If gate quality degrades with K, routing and content are entangled in this
+# implementation and claim two is not supported by this task.
+#
+# This is the cheapest direct test of claim two in the project; the length
+# generalisation sweep tests it on the time axis, this one on the content
+# axis, and together they are a much stronger paragraph than either alone.
+#
+# K is a DATA field: each value builds its own dataset. Note the readout
+# vocabulary is a function of (n_modules, K), so the head width changes too
+# -- report accuracy against the per-K chance level, not across K.
+defaults:
+  - override /model: coalitions/phase
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset.K: 4,8
+      model.gate: no_comm,oracle,attention,phase
+      train.seed: 0,1,2

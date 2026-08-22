@@ -1,0 +1,52 @@
+# @package _global_
+# IS LIVE ROUTING ACTUALLY NECESSARY? -- 24 runs + 1 build, ~8 h.
+#
+# The whole task rests on stream_mode=iid making neighbour tokens
+# unpredictable, so a receiver CANNOT infer what it needs and must be told.
+# stream_mode=rule makes the streams deterministic under a local rule, so a
+# module can in principle predict its neighbour's token instead of routing
+# to it.
+#
+# This is the manipulation check for the benchmark itself, and it is worth
+# more than another gate arm: if the gate ordering is the same under `rule`
+# as under `iid`, the gate comparison is not measuring routing, and every
+# number in gate_null means something other than what it says. The same
+# logic that made the SQOOP question-only gate non-negotiable applies here.
+#
+# EXPECTED: under iid, oracle >> no_comm and the learned gates spread out.
+# Under rule, the gap to no_comm should COLLAPSE, because a no-comm model
+# can predict its neighbours. A gap that survives under rule is a leak.
+#
+# Note stream_mode is a DATA field, so `rule` builds its own dataset (the
+# dir template encodes it). First run of the rule arm pays the build.
+defaults:
+  - override /model: coalitions/phase
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset.stream_mode: iid,rule
+      model.gate: no_comm,oracle,attention,phase
+      train.seed: 0,1,2

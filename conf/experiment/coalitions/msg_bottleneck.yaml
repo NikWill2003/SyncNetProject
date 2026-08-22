@@ -1,0 +1,52 @@
+# @package _global_
+# ROUTING EFFICIENCY UNDER A NARROW CHANNEL -- 24 runs, ~8.5 h.
+#
+# The topology-change claim is about DEGREES OF FREEDOM: a phase gate
+# spends M-1 to specify a coalition, attention spends O(M^2). A claim about
+# parameter efficiency should show up as an advantage when the channel is
+# tight, and disappear when it is wide enough that inefficiency is free.
+#
+# msg_dim is the width of the message vector every gate has to push its
+# routing decision through. At msg_dim=4 the model cannot afford to send
+# everything to everyone and sort it out at the receiver; at msg_dim=64 it
+# probably can, which is why the default (32) may already be past the point
+# where routing matters.
+#
+# This is the cleanest quantitative form of the M-1 vs O(M^2) argument
+# available without new machinery, and it is the experiment most likely to
+# turn "phase is not worse" into "phase is better, here, for this reason".
+#
+# READ: the phase-minus-attention gap as a FUNCTION of msg_dim. A constant
+# gap is a capacity story; a gap that widens as msg_dim narrows is the
+# efficiency story the thesis actually claims.
+defaults:
+  - override /model: coalitions/phase
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 1_000
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.msg_dim: 4,8,16,32
+      model.gate: attention,phase
+      train.seed: 0,1,2

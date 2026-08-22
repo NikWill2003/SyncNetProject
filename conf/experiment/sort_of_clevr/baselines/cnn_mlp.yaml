@@ -1,0 +1,37 @@
+# @package _global_
+# CNN+MLP, the control from Santoro et al. 2017. Expected shape: solves
+# the non-relational family, plateaus well below the others on the
+# relational ones. If it does NOT fail on relational questions, the task
+# is not measuring what it is supposed to.
+
+defaults:
+  - override /model: sort_of_clevr/cnn_mlp
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.0
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+# 1 seed: a screen, not a measurement. READ train_loss/cross_entropy
+# BEFORE ACCURACY.
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      train.seed: 0

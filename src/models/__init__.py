@@ -15,7 +15,9 @@ from .pos_enc import PositionalEncoder1D, PositionalEncoder2D
 from .question_encoders import (
     QuestionEncoder, IdentityQuestionEncoder, TokenEmbedQuestionEncoder,
 )
+from .film import VQAFiLM, VQAFiLMConfig
 from .question_only import VQAQuestionOnly
+from .relnet import VQARelNet, VQARelNetConfig
 from .syncnet import VQASyncNet, VQASyncNetConfig
 from .vqa_transformer import VQATransformer
 
@@ -26,5 +28,6 @@ __all__ = [
     'PositionalEncoder1D', 'PositionalEncoder2D',
     'QuestionEncoder', 'IdentityQuestionEncoder',
     'TokenEmbedQuestionEncoder',
+    'VQAFiLM', 'VQAFiLMConfig', 'VQARelNet', 'VQARelNetConfig',
     'VQAQuestionOnly', 'VQASyncNet', 'VQASyncNetConfig', 'VQATransformer',
 ]

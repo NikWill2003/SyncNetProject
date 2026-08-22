@@ -112,8 +112,10 @@ class coalitions_metrics_callback(BaseCallBack):
         metrics: dict[str, float] = {}
 
         with torch.inference_mode():
-            out = model(streams, commands, oracle_adj=oracle_adj,
-                        return_trace=True)
+            # forward_seq, not __call__: the Trainer's convention is
+            # model(batch), so the tensor-argument entry point is named.
+            out = model.forward_seq(streams, commands, oracle_adj=oracle_adj,
+                                    return_trace=True)
             logits = out['logits']
             gate = out['traces']['gate']            # (B, T, N, N)
 

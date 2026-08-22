@@ -10,7 +10,10 @@ class CoalitionsDataConfig(DataConfig):
     name: str = 'coalitions'
     seed: int = 1
     root: str = './data'
-    dir: str = 'coalitions'
+    # dir: inherited as MISSING from DataConfig ON PURPOSE. The cache-key
+    # template is written out in each conf/dataset/coalitions/*.yaml, so a
+    # config that forgets it must fail at composition rather than fall back
+    # to a default path that does not encode the fields it changed.
 
     # task shape
     n_modules: int = 4 # supported catalogues: 2, 4, 6

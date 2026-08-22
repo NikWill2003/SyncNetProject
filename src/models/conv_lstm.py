@@ -28,6 +28,16 @@ class VQAConvLSTMConfig(ModelConfig):
     use_pos_emb: bool = True   # learned absolute position on conv features
     readout: str = 'flatten'   # flatten | pool
 
+    # How the question is pooled to a vector, and where it meets the image.
+    # These two axes make CNN+MLP and Conv+LSTM presets of one model:
+    #   CNN+MLP    q_pool='mlp',  fusion='readout'   (Santoro et al. 2017)
+    #   Conv+LSTM  q_pool='lstm', fusion='spatial'   (Bahdanau et al. 2019)
+    # The off-diagonal settings are runnable too, which is the point: the
+    # question pathway becomes a measured variable rather than a confound
+    # between the two tasks' baselines.
+    q_pool: str = 'lstm'       # mlp | lstm
+    fusion: str = 'spatial'    # spatial | readout
+
     encoder: dict[str, Any] = field(default_factory=lambda: {
         'name': 'cnn', 'ch': 128, 'hidden': 64,
     })
@@ -58,14 +68,32 @@ class VQAConvLSTM(nn.Module):
             hidden_dim: int = 256,
             use_pos_emb: bool = True,
             readout: str = 'flatten',
+            q_pool: str = 'lstm',
+            fusion: str = 'spatial',
             ) -> None:
         super().__init__()
         if readout not in ('flatten', 'pool'):
             raise ValueError(f'readout must be flatten|pool, got {readout!r}')
+        if q_pool not in ('mlp', 'lstm'):
+            raise ValueError(f'q_pool must be mlp|lstm, got {q_pool!r}')
+        if fusion not in ('spatial', 'readout'):
+            raise ValueError(f'fusion must be spatial|readout, got {fusion!r}')
         self.readout = readout
+        self.q_pool = q_pool
+        self.fusion = fusion
         self.q_encoder = q_encoder
         self.encoder = encoder
-        self.lstm = nn.LSTM(q_encoder.emb_dim, lstm_hidden, batch_first=True)
+
+        # Both branches emit a (B, lstm_hidden) vector, so the two settings
+        # are interchangeable everywhere downstream.
+        if q_pool == 'lstm':
+            self.lstm = nn.LSTM(q_encoder.emb_dim, lstm_hidden,
+                                batch_first=True)
+        else:
+            self.q_mlp = nn.Sequential(
+                nn.Linear(q_encoder.out_dim, lstm_hidden), nn.ReLU(),
+                nn.Linear(lstm_hidden, lstm_hidden), nn.ReLU(),
+            )
 
         ch = encoder.ch
         # A CNN is translation-equivariant, so without this the model has
@@ -74,28 +102,45 @@ class VQAConvLSTM(nn.Module):
         self.pos_emb = nn.Parameter(
             0.02 * torch.randn(1, ch, encoder.spatial, encoder.spatial)
         ) if use_pos_emb else None
+        # Under `spatial` the question is broadcast over the map and enters
+        # the convolutions; under `readout` the convolutions see the image
+        # alone and the question is concatenated at the head.
+        fuse_in = ch + lstm_hidden if fusion == 'spatial' else ch
         self.fuse = nn.Sequential(
-            nn.Conv2d(ch + lstm_hidden, ch, 3, padding=1), nn.ReLU(),
+            nn.Conv2d(fuse_in, ch, 3, padding=1), nn.ReLU(),
             nn.Conv2d(ch, 16, 3, padding=1), nn.ReLU(),
         )
         n_tok = encoder.spatial * encoder.spatial
         in_dim = 16 * n_tok if readout == 'flatten' else 16
+        if fusion == 'readout':
+            in_dim += lstm_hidden
         self.head = nn.Sequential(
             nn.Linear(in_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, answer_dim),
         )
 
+    def _question_vector(self, questions: Tensor) -> Tensor:
+        if self.q_pool == 'lstm':
+            _, (h_n, _) = self.lstm(self.q_encoder(questions))
+            return h_n[0]                                    # (B, Hq)
+        return self.q_mlp(self.q_encoder.flat(questions))     # (B, Hq)
+
     def forward(self, images: Tensor, questions: Tensor, **kwargs) -> Tensor:
         feats = self.encoder(images)                         # (B, ch, H, W)
         if self.pos_emb is not None:
             feats = feats + self.pos_emb
-        _, (h_n, _) = self.lstm(self.q_encoder(questions))   # (1, B, Hq)
-        _, _, H, W = feats.shape
-        q_map = h_n[0].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)
-        fused = self.fuse(torch.cat([feats, q_map], dim=1))
-        if self.readout == 'pool':
-            return self.head(fused.mean(dim=(2, 3)))
-        return self.head(fused.flatten(1))
+        q = self._question_vector(questions)
+        if self.fusion == 'spatial':
+            _, _, H, W = feats.shape
+            q_map = q.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)
+            fused = self.fuse(torch.cat([feats, q_map], dim=1))
+        else:
+            fused = self.fuse(feats)
+        v = fused.mean(dim=(2, 3)) if self.readout == 'pool' \
+            else fused.flatten(1)
+        if self.fusion == 'readout':
+            v = torch.cat([v, q], dim=1)
+        return self.head(v)
 
     @staticmethod
     def build_encoder(spec: dict, img_size: int) -> nn.Module:
