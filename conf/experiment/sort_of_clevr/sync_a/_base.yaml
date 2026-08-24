@@ -1,0 +1,63 @@
+# @package _global_
+# Shared settings for the sync_a screen. Not run on its own.
+#
+# The model here is "v2": the canonical SyncNet (phase gate, quadrant
+# partition, sum readout, FiLM) with the competence fixes stacked --
+# CNN encoder, four read queries per module folded back to ch, a 64-wide
+# content head and per-module GRUs. Each rung of ladder_*.yaml switches
+# these on one at a time from the canonical model; every other file in
+# sync_a starts from v2 and changes exactly one thing.
+#
+# Training matches the gate-null cell (100k steps, bs 256, AdamW 3e-4,
+# wd 0.01, warmup-cosine, bf16, no early stopping) so accuracies are
+# comparable with the existing 25-run cell. One seed: this is a screen.
+defaults:
+  - override /model: sort_of_clevr/syncnet
+  - override /callbacks: sort_of_clevr/sync
+
+model:
+  q_conditioning: film
+  partition: quadrant
+  readout_mode: sum
+  n_modules: 4
+  module_dim: 128
+  T: 6
+  dt: 0.1
+  gate_mode: phase
+  encoder:
+    name: cnn
+    ch: 128
+    hidden: 64
+    patch_size: 5
+  n_read_heads: 4
+  read_proj: true
+  content_dim: 64
+  per_module_gru: true
+
+train:
+  seed: 0
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+wandb:
+  tags: [sync_a]
+
+hydra:
+  mode: MULTIRUN

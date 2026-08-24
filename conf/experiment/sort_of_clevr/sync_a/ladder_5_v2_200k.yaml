@@ -1,0 +1,10 @@
+# @package _global_
+# LADDER 5/5 -- v2 for 200k steps. The 200k gate-null cell gained +0.04
+# ternary over 100k on the canonical model; this says whether v2 is
+# still climbing.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+train:
+  n_steps: 200_000

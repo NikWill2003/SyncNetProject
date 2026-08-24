@@ -1,0 +1,12 @@
+# @package _global_
+# PHASEBIND 6/9 -- 2 runs. Module-module coupling kappa(h): none (modules
+# interact only through shared tokens), or the thesis MLP form.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.mod_mod_coupling: none,mlp

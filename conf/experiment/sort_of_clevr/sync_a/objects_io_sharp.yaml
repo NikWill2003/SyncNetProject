@@ -1,0 +1,14 @@
+# @package _global_
+# OBJECTS 1c/2 -- 1 run. Directed gate (send/receive phases), sharpened:
+# the other way to realise a star without leaving S^1.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+  gate_mode: phase_io
+  gate_sharpen: true

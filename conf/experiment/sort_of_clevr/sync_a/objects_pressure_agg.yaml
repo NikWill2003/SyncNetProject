@@ -1,0 +1,18 @@
+# @package _global_
+# OBJECTS pressure 1/2 -- 2 runs. Object partition, phase gate, bus /
+# budget aggregation: on object tokens an open gate delivers the MEAN of
+# the other five objects' messages, which is where interference bites.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+
+hydra:
+  sweeper:
+    params:
+      model.msg_agg: bus,budget

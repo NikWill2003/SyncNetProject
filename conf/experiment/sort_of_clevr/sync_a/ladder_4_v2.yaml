@@ -1,0 +1,11 @@
+# @package _global_
+# LADDER 4/5 -- + per-module GRUs = v2, the base for every other file in
+# sync_a. Separate parameters per module is what makes them modules
+# (the coalitions model already does this).
+# READ the ladder as: which rung closes the gap to RelNet/transformer
+# (ternary 0.72 / 0.77)? Then which of open/zero/frozen interventions
+# starts to cost anything.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+

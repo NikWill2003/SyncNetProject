@@ -1,0 +1,10 @@
+# @package _global_
+# OSCFIELD 6 -- 1 run. Wider field: 128 channels, 32 oscillators per
+# position.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+model:
+  field_ch: 128
+  n_groups: 32

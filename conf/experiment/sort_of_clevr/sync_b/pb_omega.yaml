@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND omega -- 4 runs. Token natural frequencies from features or
+# none x spread. Frequency heterogeneity is what keeps different objects
+# from synchronising by default.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.tok_omega: none,feature
+      model.omega_scale: 0.1,2.0

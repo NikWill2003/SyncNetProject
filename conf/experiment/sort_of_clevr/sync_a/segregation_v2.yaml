@@ -1,0 +1,21 @@
+# @package _global_
+# SEGREGATION -- 6 runs, partition=none on v2. Without the quadrant crutch
+# the canonical model sat at the question-only floor on every ternary
+# subtype (modules read the same tokens: read_overlap ~ 1). v2 gives the
+# modules identity (module_embed) and several queries; read_norm=modules
+# adds competition (tokens choose a module, slot-attention style).
+# READ: eval_model/read_overlap (1 = no segregation), ternary accuracy
+# vs the quadrant cell, and gate_zero_drop.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  partition: none
+  use_module_embed: true
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,open,zero
+      model.read_norm: tokens,modules

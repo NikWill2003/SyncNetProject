@@ -1,0 +1,9 @@
+# @package _global_
+# OSCFIELD 4a/4 -- 1 run. Longer integration (T 16, dt 0.5).
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+model:
+  T: 16
+  dt: 0.5

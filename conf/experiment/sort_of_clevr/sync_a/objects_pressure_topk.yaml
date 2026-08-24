@@ -1,0 +1,20 @@
+# @package _global_
+# OBJECTS pressure 2/2 -- 2 runs. Hard top-1 routing on object tokens,
+# sender chosen by phase or by attention. With one sender per step and
+# T=6, a receiver can visit five objects in sequence: a schedule.
+# READ: test_binding/gate_entropy_t* and gate_tvar.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+  gate_topk: 1
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,attn

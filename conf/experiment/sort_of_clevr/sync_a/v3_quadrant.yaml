@@ -1,0 +1,21 @@
+# @package _global_
+# V3 -- 6 runs. Every fix that is cheap and individually motivated, stacked
+# on v2: sharpened gate that can close, no self-message, budget
+# aggregation (open is not free), learned initial phases, dt 0.5, hebbian
+# coupling. Then the gate null over it. If the individual fixes each buy a
+# little, this is the configuration a claims pass would start from.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  gate_sharpen: true
+  gate_zero_diag: true
+  msg_agg: budget
+  theta_init: learned
+  dt: 0.5
+  coupling: hebbian
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,frozen,open,zero,attn,phase_io

@@ -1,0 +1,10 @@
+# @package _global_
+# OSCFIELD 8 -- 2 runs. Smaller steps at T=8.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.dt: 0.25,0.5

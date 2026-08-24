@@ -1,0 +1,12 @@
+# @package _global_
+# SYNC READOUT -- 2 runs. CTM-style: the answer is read from the pairwise
+# phase-synchrony history (sync) or from it plus content (both). Asks
+# whether the phases carry answer information at all.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.readout_mode: sync,both

@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND 4/9 -- 2 runs. Token-token coupling: none, or global
+# (similarity over all pairs, the complex-AE form) instead of local
+# 8-neighbour.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.tok_coupling: none,global

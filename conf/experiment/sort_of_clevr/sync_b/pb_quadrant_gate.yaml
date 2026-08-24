@@ -1,0 +1,15 @@
+# @package _global_
+# PHASEBIND quadrant 2 -- 2 runs. With segregation imposed, is the message
+# gate load-bearing (open / zero)?
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+model:
+  partition: quadrant
+  n_modules: 4
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: open,zero

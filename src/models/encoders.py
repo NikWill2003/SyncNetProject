@@ -89,6 +89,7 @@ def build_encoder(spec: dict, img_size: int) -> nn.Module:
     """
     kwargs = dict(spec)
     name = kwargs.pop('name', 'patchify')
+    kwargs.pop('obj_size', None)        # objects-encoder key, ignored here
     if name == 'patchify':
         kwargs.pop('hidden', None)
         return PatchifyEncoder(img_size=img_size, **kwargs)

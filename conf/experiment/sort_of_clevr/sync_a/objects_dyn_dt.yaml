@@ -1,0 +1,16 @@
+# @package _global_
+# OBJECTS dynamics 1/4 -- 2 runs. Step size on object tokens.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+
+hydra:
+  sweeper:
+    params:
+      model.dt: 0.5,1.0

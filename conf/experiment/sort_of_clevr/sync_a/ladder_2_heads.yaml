@@ -1,0 +1,11 @@
+# @package _global_
+# LADDER 2/5 -- + four read queries per module (folded back to ch). A
+# single softmax read is a weighted mean; a module cannot hold two
+# objects at once with one query.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  content_dim: 8
+  per_module_gru: false

@@ -1,0 +1,33 @@
+# @package _global_
+# Shared settings for the sync_b screen (new models). Not run on its own.
+# Same training recipe as sync_a / the gate-null cell; one seed.
+defaults:
+  - override /callbacks: sort_of_clevr/sync
+
+train:
+  seed: 0
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+wandb:
+  tags: [sync_b]
+
+hydra:
+  mode: MULTIRUN

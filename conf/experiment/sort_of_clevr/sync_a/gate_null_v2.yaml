@@ -1,0 +1,17 @@
+# @package _global_
+# GATE NULL ON V2 -- 7 runs. The headline null (all five gates within
+# 0.024 ternary) was measured on a model at CNN+MLP level. Repeat it on a
+# model that can do the task, add the missing lower bound (zero: no
+# messages at all) and the directed gate (phase_io: separate send and
+# receive phases, g_ij = cos(theta_in_i - theta_out_j), which can realise
+# a star graph on S^1 where the symmetric gate cannot).
+# READ: test_interventions/gate_zero_drop first. If zero == open, the
+# messages are not used and the gate cannot matter.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,frozen,open,attn,mlp,zero,phase_io

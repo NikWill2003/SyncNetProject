@@ -1,0 +1,11 @@
+# @package _global_
+# CONDITIONING -- 2 runs. Where the question enters, on v2. On the canonical
+# model this was the single largest effect on the task; the CNN encoder
+# may change that.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.q_conditioning: broadcast_cat,token

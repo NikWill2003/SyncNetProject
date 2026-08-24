@@ -1,0 +1,17 @@
+# @package _global_
+# OSCFIELD 1/2 -- 4 runs. AKOrN-style oscillator field on a 19x19 feature
+# map, no modules, no gate. readout sync = find the queried object by
+# content, read what is in phase with it; content = the same model with
+# no phase used. coupling none = oscillators driven by stimulus only.
+# READ: the four cells cross "is phase used" x "do oscillators interact".
+# tok_shuffle and lambda0 interventions apply.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.readout: sync,content
+      model.coupling: conv,none

@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND 8/9 -- 6 runs. Oscillator dimension x steps. (d=2, T=6) repeats
+# pb_full: a free seed-repeat for the 1-seed screen.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.osc_dim: 2,4
+      model.T: 3,6,12

@@ -1,0 +1,11 @@
+# @package _global_
+# OSCFIELD 7 -- 2 runs. Coupling kernel 3x3 (nearest neighbours only) vs
+# 9x9 (roughly one object diameter at 19x19).
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.ksize: 3,9

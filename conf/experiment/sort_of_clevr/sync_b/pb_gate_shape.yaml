@@ -1,0 +1,12 @@
+# @package _global_
+# PHASEBIND gate shape -- 4 runs. Sharpened vs the thesis (1+cos)/2 gate x
+# self-message removed / kept. (true, true) repeats pb_full.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.gate_sharpen: true,false
+      model.gate_zero_diag: true,false

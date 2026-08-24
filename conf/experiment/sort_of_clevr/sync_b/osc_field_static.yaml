@@ -1,0 +1,13 @@
+# @package _global_
+# OSCFIELD 9 -- 1 run. No coupling, no stimulus, feature init: the phases
+# are a static function of the encoder (complex-autoencoder style) and
+# nothing evolves. If this matches the full model, the dynamics are not
+# what the readout uses.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+model:
+  coupling: none
+  stimulus: false
+  z_init: feature

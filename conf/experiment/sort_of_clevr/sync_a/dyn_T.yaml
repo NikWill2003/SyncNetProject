@@ -1,0 +1,13 @@
+# @package _global_
+# DYNAMICS 6/6 -- 2 runs. Number of internal steps. Fills the iteration
+# table; with the T sweep callback every run also reports accuracy at
+# test-time T in {0..16}, so this cell says whether the trained solution
+# is a converging dynamics (robust to more steps) or unrolled depth.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.T: 2,12

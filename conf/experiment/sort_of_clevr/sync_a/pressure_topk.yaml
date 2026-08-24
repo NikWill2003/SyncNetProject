@@ -1,0 +1,17 @@
+# @package _global_
+# PRESSURE 2/2 -- 2 runs. Hard top-1 routing (straight-through): each
+# receiver hears exactly one other module per step, chosen by the phase
+# gate or by the attention gate. Forces selectivity; if accuracy holds,
+# bandwidth was never needed, and the two runs say which selector picks
+# the right sender.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  gate_topk: 1
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,attn

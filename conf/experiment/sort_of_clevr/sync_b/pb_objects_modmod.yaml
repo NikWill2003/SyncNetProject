@@ -1,0 +1,16 @@
+# @package _global_
+# PHASEBIND on OBJECTS 4 -- 2 runs. Module-module coupling none / MLP on
+# object tokens.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  tok_coupling: global
+  n_modules: 6
+
+hydra:
+  sweeper:
+    params:
+      model.mod_mod_coupling: none,mlp

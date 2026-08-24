@@ -1,0 +1,23 @@
+# @package _global_
+# V3 on OBJECTS -- 6 runs. The stacked configuration with one module per
+# object, gate null over it.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  gate_sharpen: true
+  gate_zero_diag: true
+  msg_agg: budget
+  theta_init: learned
+  dt: 0.5
+  coupling: hebbian
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,frozen,open,zero,attn,phase_io

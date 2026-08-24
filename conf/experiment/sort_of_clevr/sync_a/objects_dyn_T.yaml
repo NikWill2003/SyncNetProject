@@ -1,0 +1,18 @@
+# @package _global_
+# OBJECTS dynamics 4/4 -- 2 runs. Steps on object tokens; with one module
+# per object the number of steps bounds how many objects a receiver can
+# hear in sequence.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+
+hydra:
+  sweeper:
+    params:
+      model.T: 2,12

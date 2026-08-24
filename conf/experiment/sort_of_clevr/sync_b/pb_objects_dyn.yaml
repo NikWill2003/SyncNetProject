@@ -1,0 +1,17 @@
+# @package _global_
+# PHASEBIND on OBJECTS 5 -- 4 runs. Oscillator dimension x steps on object
+# tokens.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  tok_coupling: global
+  n_modules: 6
+
+hydra:
+  sweeper:
+    params:
+      model.osc_dim: 2,4
+      model.T: 3,12

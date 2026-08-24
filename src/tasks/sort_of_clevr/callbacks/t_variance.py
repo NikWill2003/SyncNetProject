@@ -14,6 +14,7 @@ from ....core.callbacks import BaseCallBack
 from ....core.config import CallbackConfig
 from ....core.registry import CallbackSpec
 from .sync_metrics import _unwrap
+from ..data import constants as C
 
 if TYPE_CHECKING:
     from ....training import Trainer
@@ -76,11 +77,16 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
     # ------------------------------------------------------------------
 
     @torch.inference_mode()
-    def _accuracy_once(self, trainer: Trainer, t: int) -> float:
+    def _accuracy_once(self, trainer: Trainer, t: int) -> dict[str, float]:
+        """overall / binary / ternary accuracy at test-time T = t."""
         model = _unwrap(trainer.model)
         model.eval()
 
-        correct, total = 0, 0
+        keys = ('all', 'binary', 'ternary')
+        correct = {k: 0 for k in keys}
+        total = {k: 0 for k in keys}
+        bin_idx = C.Q_TYPE_IDX + C.Q_TYPES_OFFSET['binary']
+        tern_idx = C.Q_TYPE_IDX + C.Q_TYPES_OFFSET['ternary']
         for b_idx, batch in enumerate(iter(trainer.test_dataloader)):
             if b_idx >= self.max_batches:
                 break
@@ -88,11 +94,15 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
                 {'images': batch['images'], 'questions': batch['questions']},
                 t_override=t,
             )
-            pred = out['logits'].argmax(-1)
-            correct += (pred == batch['answers']).sum().item()
-            total += batch['answers'].shape[0]
+            hit = (out['logits'].argmax(-1) == batch['answers'])
+            qs = batch['questions']
+            for k, sel in (('all', torch.ones_like(hit)),
+                           ('binary', qs[:, bin_idx] == 1),
+                           ('ternary', qs[:, tern_idx] == 1)):
+                correct[k] += int(hit[sel].sum().item())
+                total[k] += int(sel.sum().item())
 
-        return correct / max(total, 1)
+        return {k: correct[k] / max(total[k], 1) for k in keys}
 
     def on_train_end(self, trainer: Trainer) -> None:
         model = _unwrap(trainer.model)
@@ -110,13 +120,14 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
         )
 
         means, stds = [], []
+        fam_means: dict[str, list[float]] = {'binary': [], 'ternary': []}
         for t in self.t_values:
-            accs = torch.tensor([
-                self._accuracy_once(trainer, t)
-                for _ in range(self.n_repeats)
-            ])
+            reps = [self._accuracy_once(trainer, t) for _ in range(self.n_repeats)]
+            accs = torch.tensor([r['all'] for r in reps])
             means.append(accs.mean().item())
             stds.append(accs.std(unbiased=False).item())
+            for k in fam_means:
+                fam_means[k].append(float(torch.tensor([r[k] for r in reps]).mean()))
 
         means_t = torch.tensor(means)
         stds_t = torch.tensor(stds)
@@ -131,6 +142,10 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
             alpha=0.25, color='tab:blue',
             label=f'±1 std over {self.n_repeats} inits',
         )
+        ax.plot(self.t_values, fam_means['binary'], marker='s', ms=3, lw=1,
+                color='tab:green', label='binary')
+        ax.plot(self.t_values, fam_means['ternary'], marker='^', ms=3, lw=1,
+                color='tab:purple', label='ternary')
         train_T = int(getattr(model, 'T'))
         ax.axvline(train_T, color='tab:red', ls='--', lw=1,
                    label=f'train T={train_T}')
@@ -167,6 +182,9 @@ class sort_of_clevr_t_variance_callback(BaseCallBack):
                     for t, m, s in zip(self.t_values, means, stds):
                         run.summary[f't_variance/acc_mean_T{t}'] = m
                         run.summary[f't_variance/acc_std_T{t}'] = s
+                    for k, vals in fam_means.items():
+                        for t, m in zip(self.t_values, vals):
+                            run.summary[f't_variance/{k}_mean_T{t}'] = m
             except Exception:
                 # never let a plot kill a long run at the finish line
                 if trainer.logger is not None:

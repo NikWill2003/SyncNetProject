@@ -1,0 +1,13 @@
+# @package _global_
+# DYNAMICS 3/6 -- 1 run. Natural frequencies fixed (not learned) with real
+# spread. Trained models reach R ~ 0.95: with omega learnable the model
+# can erase the heterogeneity that disperses phases. This forbids that;
+# omega_init 2.0 at dt 0.1 is a drift of 0.2 rad/step between the
+# extreme modules.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  learn_omega: false
+  omega_init: 2.0

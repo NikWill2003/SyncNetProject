@@ -1,0 +1,12 @@
+# @package _global_
+# PHASEBIND 3/9 -- 2 runs. Competition. tokens: plain attention (no
+# competition, the syncnet's read); both: product of the two softmaxes.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.read_norm: tokens,both

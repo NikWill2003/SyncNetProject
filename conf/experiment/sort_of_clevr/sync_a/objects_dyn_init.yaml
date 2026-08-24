@@ -1,0 +1,18 @@
+# @package _global_
+# OBJECTS dynamics 2/4 -- 2 runs. Learned initial phases (a persistent
+# module = object identity in phase) with and without dynamics.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: object
+  n_modules: 6
+  n_read_heads: 1
+  read_proj: false
+  theta_init: learned
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,frozen

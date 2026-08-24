@@ -1,0 +1,14 @@
+# @package _global_
+# PHASEBIND 1/9 -- 1 run. The full model on the CNN grid, partition=none,
+# six modules: phase-gated read with competition over modules, local
+# token coupling, module<->token coupling, hebbian module coupling,
+# sharpened phase gate. Everything below removes one path from this.
+# READ: assign_purity (1 = every token owned by one module), module_use
+# (1 = all modules used), read_overlap (0 = segregated), bind_R (tokens a
+# module reads are in phase), then the interventions: tok_shuffle and
+# lambda0 are the binding-by-phase tests; gate_zero the messaging test.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+

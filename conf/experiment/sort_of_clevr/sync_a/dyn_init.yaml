@@ -1,0 +1,17 @@
+# @package _global_
+# DYNAMICS 1/6 -- 2 runs. Learned initial phases instead of U[0, 2pi) per
+# forward pass: a persistent module identity in phase. With gate=frozen
+# this is the proper "no dynamics" control (the current frozen gate is a
+# fresh random matrix every forward); with gate=phase the dynamics start
+# from identity rather than noise.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  theta_init: learned
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,frozen

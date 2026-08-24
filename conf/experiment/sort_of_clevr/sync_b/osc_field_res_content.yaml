@@ -1,0 +1,10 @@
+# @package _global_
+# OSCFIELD 10 -- 1 run. 38x38 field with the content readout: the
+# no-phase control at the high resolution.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+model:
+  n_down: 1
+  readout: content

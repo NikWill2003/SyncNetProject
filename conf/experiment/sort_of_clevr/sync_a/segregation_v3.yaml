@@ -1,0 +1,21 @@
+# @package _global_
+# SEGREGATION v3 -- 2 runs. partition=none with competition and the v3
+# settings (a gate that can close, open not free).
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  gate_sharpen: true
+  gate_zero_diag: true
+  msg_agg: budget
+  theta_init: learned
+  dt: 0.5
+  coupling: hebbian
+  partition: none
+  use_module_embed: true
+  read_norm: modules
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,open

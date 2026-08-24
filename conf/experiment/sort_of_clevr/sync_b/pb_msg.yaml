@@ -1,0 +1,10 @@
+# @package _global_
+# PHASEBIND messages -- 2 runs. Budget / bus aggregation (open is not free).
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.msg_agg: budget,bus

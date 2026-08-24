@@ -1,0 +1,12 @@
+# @package _global_
+# DYNAMICS 2/6 -- 2 runs. dt=0.1 x T=6 moves a phase by at most ~2 rad
+# unless K grows; at init eval_model/gate_tvar ~ 0.001 (the gate barely
+# changes during the computation). AKOrN integrates with a step near 1.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.dt: 0.5,1.0

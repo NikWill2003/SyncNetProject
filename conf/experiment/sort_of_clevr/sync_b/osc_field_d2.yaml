@@ -1,0 +1,10 @@
+# @package _global_
+# OSCFIELD 4b/4 -- 1 run. Scalar oscillators (d=2, 32 groups) instead of
+# d=4 x 16 groups: the strict circle constraint at the field level.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+model:
+  osc_dim: 2
+  n_groups: 32

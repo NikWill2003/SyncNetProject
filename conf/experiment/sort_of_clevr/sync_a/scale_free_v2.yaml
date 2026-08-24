@@ -1,0 +1,18 @@
+# @package _global_
+# MORE MODULES -- 2 runs. partition=none with 8 modules and competition
+# (more modules than objects). The old scale_free cell (4->16 modules,
+# +0.02 ternary) was on the canonical read.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  partition: none
+  n_modules: 8
+  use_module_embed: true
+  read_norm: modules
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: phase,open

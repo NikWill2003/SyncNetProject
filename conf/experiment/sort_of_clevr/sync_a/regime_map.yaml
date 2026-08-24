@@ -1,0 +1,18 @@
+# @package _global_
+# REGIME MAP -- 9 runs. dt x natural-frequency spread with omega FIXED, on
+# v2 (quadrant). Locates the trained model in Kuramoto parameter space:
+# where does global sync (R -> 1) give way to partial sync or drift, and
+# does accuracy care. dt=0.1, omega=0.5 is the canonical regime with omega
+# frozen (cf. dyn_omega at 2.0).
+# READ: eval_model/phase_R, gate_entropy, gate_tvar, then ternary.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  learn_omega: false
+
+hydra:
+  sweeper:
+    params:
+      model.dt: 0.1,0.5,1.0
+      model.omega_init: 0.5,2.0,5.0

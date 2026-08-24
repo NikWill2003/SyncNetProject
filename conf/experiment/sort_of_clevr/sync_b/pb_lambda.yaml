@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND lambda -- 4 runs. Weight of the phase term in the read, learned
+# or fixed. lambda=0.5 barely uses phase; 8 makes the read almost purely
+# phase-driven. READ: eval_model/lambda (where it ends up when learned).
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.lambda_init: 0.5,8.0
+      model.learn_lambda: true,false

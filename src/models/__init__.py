@@ -19,6 +19,9 @@ from .film import VQAFiLM, VQAFiLMConfig
 from .question_only import VQAQuestionOnly
 from .relnet import VQARelNet, VQARelNetConfig
 from .syncnet import VQASyncNet, VQASyncNetConfig
+from .phasebind import PhaseBind, PhaseBindConfig
+from .osc_field import OscField, OscFieldConfig
+from .object_tokens import ObjectTokenizer
 from .vqa_transformer import VQATransformer
 
 __all__ = [
@@ -30,4 +33,5 @@ __all__ = [
     'TokenEmbedQuestionEncoder',
     'VQAFiLM', 'VQAFiLMConfig', 'VQARelNet', 'VQARelNetConfig',
     'VQAQuestionOnly', 'VQASyncNet', 'VQASyncNetConfig', 'VQATransformer',
+    'PhaseBind', 'PhaseBindConfig', 'OscField', 'OscFieldConfig', 'ObjectTokenizer',
 ]

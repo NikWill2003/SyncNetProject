@@ -1,0 +1,11 @@
+# @package _global_
+# PHASEBIND 5/9 -- 1 run. Remove the module<->token coupling: modules
+# no longer pull the tokens they read into phase (and are not pulled
+# by them), so a binding cannot reinforce itself across steps.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+model:
+  mod_tok_coupling: false

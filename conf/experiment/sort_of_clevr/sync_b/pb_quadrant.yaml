@@ -1,0 +1,11 @@
+# @package _global_
+# PHASEBIND control -- 1 run. Quadrant partition imposed (M=4), as in the
+# canonical syncnet; is emergent segregation as good as the imposed one?
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+model:
+  partition: quadrant
+  n_modules: 4

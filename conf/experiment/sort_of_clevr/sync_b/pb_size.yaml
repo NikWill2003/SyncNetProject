@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND 9/9 -- 4 runs. Fewer / more modules than objects x sum / concat
+# readout (concat lets the head integrate across modules).
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.n_modules: 4,8
+      model.readout_mode: sum,concat

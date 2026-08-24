@@ -1,0 +1,15 @@
+# @package _global_
+# OSCFIELD 3/4 -- 4 runs. stimulus x initialisation. Without the stimulus
+# the phases are shaped by coupling alone; with random init the phases
+# carry nothing from the encoder and everything from the dynamics.
+# (stimulus=true, z_init=feature) repeats osc_field's full cell: a free
+# seed-repeat for the 1-seed screen.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.stimulus: true,false
+      model.z_init: feature,random

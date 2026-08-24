@@ -1,0 +1,17 @@
+# @package _global_
+# EXPRESSIBILITY 2/3 -- 2 runs. Oscillators on S^{d-1} (thesis eq.
+# kuramoto-nd) with the sharpened gate. On S^1 a module cannot be in
+# phase with two others that are out of phase with each other; d=4, 8
+# relax that (rho(G,d) -> 0). If the gate matters at all, the dimension
+# ladder should show it before anything else does.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  gate_sharpen: true
+
+hydra:
+  sweeper:
+    params:
+      model.osc_dim: 4,8

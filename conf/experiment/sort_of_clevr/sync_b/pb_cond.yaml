@@ -1,0 +1,9 @@
+# @package _global_
+# PHASEBIND conditioning -- 1 run. Broadcast-concat question conditioning
+# instead of FiLM.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+model:
+  q_conditioning: broadcast_cat

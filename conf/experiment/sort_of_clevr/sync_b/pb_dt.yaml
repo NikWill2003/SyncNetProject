@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND 8b/9 -- 4 runs. Step size x (learned | random per-forward)
+# module phases.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.dt: 0.25,1.0
+      model.mod_phase_init: learned,random

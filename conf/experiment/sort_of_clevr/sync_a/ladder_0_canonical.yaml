@@ -1,0 +1,14 @@
+# @package _global_
+# LADDER 0/5 -- the canonical model (patchify, 1 read query, content_dim 8,
+# shared GRU), re-run once so it carries the same interventions and T
+# sweep as everything else. Should reproduce ternary ~0.62.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  encoder: {name: patchify, ch: 128, patch_size: 5}
+  n_read_heads: 1
+  read_proj: false
+  content_dim: 8
+  per_module_gru: false

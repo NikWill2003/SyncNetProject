@@ -1,0 +1,19 @@
+# @package _global_
+# EXPRESSIBILITY 1/3 -- 4 runs. (1+cos)/2 cannot fall below 0.5 at 90 deg,
+# so the thesis gate cannot close a channel except at antiphase. Sharpened
+# sigmoid(alpha cos + b) can; alpha sets the steepness and b the default
+# openness (b=-4 starts channels mostly closed, so the dynamics must open
+# them). READ: gate_offdiag, gate_entropy (1 = all senders equal) and
+# whether phase_R still collapses to ~1.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  gate_sharpen: true
+
+hydra:
+  sweeper:
+    params:
+      model.gate_alpha_init: 4.0,8.0
+      model.gate_bias_init: -1.0,-4.0

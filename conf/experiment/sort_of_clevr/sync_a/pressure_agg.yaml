@@ -1,0 +1,14 @@
+# @package _global_
+# PRESSURE 1/2 -- 2 runs. Under mean aggregation opening a channel is free,
+# so nothing pushes any gate toward selectivity. bus: LayerNorm the summed
+# message (every open sender dilutes the others); budget: divide by the
+# open mass + 1. Communication-through-coherence is a story about limited
+# bandwidth -- this is the bandwidth limit.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.msg_agg: bus,budget

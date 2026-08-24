@@ -1,0 +1,10 @@
+# @package _global_
+# PHASEBIND 3b/9 -- 1 run. Hard assignment (straight-through argmax over
+# modules per token): every token belongs to exactly one module.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+model:
+  hard_assign: true

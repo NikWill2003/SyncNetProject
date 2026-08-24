@@ -1,0 +1,11 @@
+# @package _global_
+# OSCFIELD 2/4 -- 2 runs. Field resolution: 38x38 (one stride-2; the
+# closest to "oscillators on pixels") and 10x10.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.n_down: 1,3

@@ -1,0 +1,13 @@
+# @package _global_
+# PHASEBIND 7/9 -- 3 runs. The module-module gate: open, zero (no
+# messages: relations must be solved by binding alone) and content
+# attention.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.gate_mode: open,zero,attn

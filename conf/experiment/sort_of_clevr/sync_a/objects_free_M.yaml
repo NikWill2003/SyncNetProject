@@ -1,0 +1,19 @@
+# @package _global_
+# OBJECTS free 2 -- 2 runs. More modules than objects (8, 12) with free
+# assignment: do the surplus modules stay idle or split objects?
+# READ: test_binding/obj_coverage, module_purity, module_use.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  partition: none
+  n_read_heads: 1
+  read_proj: false
+  use_module_embed: true
+  read_norm: modules
+
+hydra:
+  sweeper:
+    params:
+      model.n_modules: 8,12

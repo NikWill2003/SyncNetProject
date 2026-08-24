@@ -1,0 +1,9 @@
+# @package _global_
+# PHASEBIND encoder -- 1 run. Patchify (one linear map of raw 5x5 patches)
+# instead of the CNN: the encoder confound on the new model.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+model:
+  encoder: {name: patchify, ch: 128, patch_size: 5}

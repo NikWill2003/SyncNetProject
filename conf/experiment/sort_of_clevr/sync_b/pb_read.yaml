@@ -1,0 +1,14 @@
+# @package _global_
+# PHASEBIND 2/9 -- 3 runs. What the phase does at the read. none: content
+# only (the patched syncnet with competition); only: phase only, no
+# content similarity at all; multiplicative: content read masked by the
+# phase gate.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.phase_read: none,only,multiplicative

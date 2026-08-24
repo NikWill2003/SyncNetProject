@@ -1,0 +1,22 @@
+# @package _global_
+# PHASEBIND on OBJECTS -- 6 runs. No patchify: six object tokens, six
+# modules. partition=none: modules must claim objects through phase
+# binding; partition=object: one module per object imposed. Gates: phase,
+# open, zero. On objects the question's coalition is explicit (a star
+# from the queried object for binary questions), so gate_entropy and
+# gate_tvar are readable as graphs.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/phasebind
+  - _self_
+
+model:
+  encoder: {name: objects, ch: 128, obj_size: 5}
+  tok_coupling: global
+  n_modules: 6
+
+hydra:
+  sweeper:
+    params:
+      model.partition: none,object
+      model.gate_mode: phase,open,zero

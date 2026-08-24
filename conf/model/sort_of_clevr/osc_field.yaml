@@ -1,0 +1,32 @@
+defaults:
+  - sort_of_clevr_osc_field_base
+  - _self_
+
+# OscField: an AKOrN-style oscillator field over a conv feature map, no
+# modules and no gate; readout finds an object by content and reads what
+# is in phase with it (see src/models/osc_field.py).
+name: sort_of_clevr_osc_field
+
+q_conditioning: film        # film | broadcast_cat | token
+q_emb_dim: 32
+hidden: 48
+n_down: 2                   # 75px: 1 -> 38x38, 2 -> 19x19, 3 -> 10x10
+field_ch: 64
+use_pos_emb: true
+
+osc_dim: 4
+n_groups: 16
+T: 8
+dt: 1.0
+ksize: 5
+coupling: conv              # conv | none
+stimulus: true
+learn_omega: true
+omega_scale: 0.1
+z_init: feature             # feature | random
+
+readout: sync               # sync | content
+n_slots: 2
+beta_init: 5.0
+lambda_init: 4.0
+hidden_dim: 256

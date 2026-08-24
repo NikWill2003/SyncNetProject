@@ -1,0 +1,13 @@
+# @package _global_
+# LADDER 1/5 -- canonical + CNN encoder (3 stride-2 convs, 10x10 tokens).
+# Patchify is one linear map of raw 5x5 patches; objects are 11 px and
+# straddle them. First test of "the read is the bottleneck".
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  n_read_heads: 1
+  read_proj: false
+  content_dim: 8
+  per_module_gru: false

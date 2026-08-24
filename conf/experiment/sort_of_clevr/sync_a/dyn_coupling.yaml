@@ -1,0 +1,13 @@
+# @package _global_
+# DYNAMICS 4/6 -- 2 runs. kappa_ij(h) in eq. phi: hebbian = tanh(<Wh_i,
+# Wh_j>) (signed, like content attracts, unlike repels; no MLP); none =
+# no coupling at all (phases only drift at omega, so the gate is a fixed
+# schedule).
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model.coupling: hebbian,none

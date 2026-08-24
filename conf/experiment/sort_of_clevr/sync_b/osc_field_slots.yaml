@@ -1,0 +1,11 @@
+# @package _global_
+# OSCFIELD 5 -- 2 runs. One slot (a single find-then-read-the-coalition
+# hop must carry every question) and three.
+defaults:
+  - /experiment/sort_of_clevr/sync_b/_base
+  - override /model: sort_of_clevr/osc_field
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.n_slots: 1,3

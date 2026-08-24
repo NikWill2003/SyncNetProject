@@ -1,0 +1,9 @@
+# @package _global_
+# LADDER 3/5 -- + content_dim 64. The readout saw 8 numbers per module
+# of attended content.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  per_module_gru: false
