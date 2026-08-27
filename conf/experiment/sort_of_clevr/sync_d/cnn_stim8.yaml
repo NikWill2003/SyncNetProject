@@ -1,0 +1,10 @@
+# @package _global_
+# PIXELS, original one-shot read, d=8 + stimulus (d=8 vs d=6 on pixels).
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  phase_repr: vector
+  osc_dim: 8
+  drive: stimulus

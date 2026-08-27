@@ -1,0 +1,11 @@
+# @package _global_
+# PIXELS, upgraded read, open bus.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  read_heads: 4
+  read_norm: modules
+  read_every_step: true
+  bus_phase: open

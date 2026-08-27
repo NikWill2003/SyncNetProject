@@ -1,0 +1,10 @@
+# @package _global_
+# PIXELS, all-synchrony perception, full-access private lines: the bandwidth ceiling with field perception.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  medium: channels
+  gate_mode: full

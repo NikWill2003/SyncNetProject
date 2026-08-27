@@ -1,0 +1,14 @@
+# @package _global_
+# PIXELS, all-synchrony perception, d=6 STATIC addresses: the same-capacity control for field_stim6.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  phase_repr: vector
+  osc_dim: 6
+  theta_init: learned
+  coupling: none
+  learn_omega: false
+  omega_init: 0.0

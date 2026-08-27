@@ -1,0 +1,13 @@
+# @package _global_
+# PIXELS, upgraded attention-from-state read (4 queries, competition over modules, re-read every step), d=6 + stimulus.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  read_heads: 4
+  read_norm: modules
+  read_every_step: true
+  phase_repr: vector
+  osc_dim: 6
+  drive: stimulus

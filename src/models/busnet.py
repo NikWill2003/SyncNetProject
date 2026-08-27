@@ -135,6 +135,10 @@ class BusNetConfig(ModelConfig):
     # read their object from a conv grid (module k = colour k either way)
     encoder: dict[str, Any] = field(default_factory=lambda: {'name': 'objects', 'ch': 128, 'hidden': 64, 'patch_size': 5})
     read_beta_init: float = 5.0
+    # colour-keyed grid read upgrades (defaults reproduce the one-shot single-query read)
+    read_heads: int = 1                 # queries per module, concatenated then projected
+    read_norm: str = 'tokens'           # tokens | modules (competition: cells choose a module)
+    read_every_step: bool = False       # re-read the grid from the evolving state at every step
     use_pos_emb: bool = True
     slot_iters: int = 3                 # slots / field front-ends
     # field front-end (encoder: {name: field}): OscField dynamics, then PHASE
@@ -329,9 +333,11 @@ class BusNet(nn.Module):
                 self.pos_emb = nn.Parameter(0.02 * torch.randn(1, enc_ch, self.spatial, self.spatial))
             self.grid_film_gamma = nn.Linear(Nq * cfg.q_size, enc_ch)
             self.grid_film_beta = nn.Linear(Nq * cfg.q_size, enc_ch)
-            self.read_query = nn.Linear(dm, enc_ch)
+            if cfg.read_norm not in ('tokens', 'modules'):
+                raise ValueError(f'unknown read_norm {cfg.read_norm!r}')
+            self.read_query = nn.Linear(dm, enc_ch * max(1, cfg.read_heads))
             self.log_read_beta = nn.Parameter(torch.tensor(float(np.log(cfg.read_beta_init))))
-            self.grid_to_tok = nn.Linear(enc_ch, cfg.tok_dim)
+            self.grid_to_tok = nn.Linear(enc_ch * max(1, cfg.read_heads), cfg.tok_dim)
         else:
             self.spatial = None
         if self.n_heads:
@@ -431,6 +437,24 @@ class BusNet(nn.Module):
     # ------------------------------------------------------------------
 
     # ---------------- vector phases on S^{d-1} ----------------
+
+    def _grid_read(self, h_mod: Tensor, tokens: Tensor, keys: Tensor) -> tuple[Tensor, Tensor]:
+        """Colour-keyed read: each module queries the grid from its state
+        (+ identity, which lives in the state). Multiple queries per module are
+        concatenated; read_norm='modules' makes cells choose a module."""
+        cfg = self.cfg
+        B, M, _ = h_mod.shape
+        H = max(1, cfg.read_heads)
+        ch = keys.shape[-1]
+        q = F.normalize(self.read_query(h_mod).view(B, M, H, ch), dim=-1)
+        logits = self.log_read_beta.exp() * torch.einsum('bmhc,bpc->bmhp', q, keys)
+        if cfg.read_norm == 'modules':
+            w = F.softmax(logits, dim=1)                                      # cells choose modules
+            attn = w / (w.sum(-1, keepdim=True) + 1e-6)
+        else:
+            attn = F.softmax(logits, dim=-1)
+        X = self.grid_to_tok(torch.einsum('bmhp,bpc->bmhc', attn, tokens).reshape(B, M, H * ch))
+        return X, attn.mean(2)
 
     def _init_z(self, B: int, dev, dtype) -> Tensor:
         N, d = self.N, self.d
@@ -614,12 +638,11 @@ class BusNet(nn.Module):
             f = self.grid_norm(f)
             if cfg.use_pos_emb:
                 f = f + self.pos_emb
-            tokens = f.flatten(2).transpose(1, 2)                           # (B, P, ch)
-            keys = F.normalize(tokens, dim=-1)
-            queries = F.normalize(self.read_query(h), dim=-1)               # (B, M, ch)
-            read_attn = F.softmax(self.log_read_beta.exp() * torch.einsum('bmc,bpc->bmp', queries, keys), -1)
-            X = self.grid_to_tok(torch.einsum('bmp,bpc->bmc', read_attn, tokens))   # (B, M, tok)
+            grid_tokens = f.flatten(2).transpose(1, 2)                      # (B, P, ch)
+            grid_keys = F.normalize(grid_tokens, dim=-1)
+            X, read_attn = self._grid_read(h, grid_tokens, grid_keys)       # (B, M, tok), (B, M, P)
         X = self.norm(X * (1 + self.film_gamma(q_all)).unsqueeze(1) + self.film_beta(q_all).unsqueeze(1))
+        reread = (not self.objects) and (not self.slots) and (not self.field_fe) and cfg.read_every_step
         if self.n_heads:
             h_heads = self.head_init(questions) + self.head_embed.unsqueeze(0)     # (B, Nq, dm)
             h = torch.cat([h, h_heads], 1)
@@ -671,6 +694,12 @@ class BusNet(nn.Module):
             else:
                 r, g = self._receive(h, theta)
             g_hist.append(g)
+            if reread:
+                Xm, read_attn = self._grid_read(h[:, :M], grid_tokens, grid_keys)
+                Xm = self.norm(Xm * (1 + self.film_gamma(q_all)).unsqueeze(1) + self.film_beta(q_all).unsqueeze(1))
+                X = torch.cat([Xm, torch.zeros(B, self.n_heads, Xm.shape[-1], device=dev, dtype=Xm.dtype)], 1)
+                P = read_attn.shape[-1]
+                attn_fixed = torch.cat([read_attn, torch.full((B, self.n_heads, P), 1.0 / P, device=dev, dtype=X.dtype)], 1)
             h = self._update(torch.cat([X, r], -1), h)
             if evolve:
                 if self.vector:
