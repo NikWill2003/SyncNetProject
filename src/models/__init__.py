@@ -22,6 +22,8 @@ from .syncnet import VQASyncNet, VQASyncNetConfig
 from .phasebind import PhaseBind, PhaseBindConfig
 from .osc_field import OscField, OscFieldConfig
 from .object_tokens import ObjectTokenizer
+from .fieldsync import FieldSync, FieldSyncConfig
+from .busnet import BusNet, BusNetConfig
 from .vqa_transformer import VQATransformer
 
 __all__ = [
@@ -34,4 +36,5 @@ __all__ = [
     'VQAFiLM', 'VQAFiLMConfig', 'VQARelNet', 'VQARelNetConfig',
     'VQAQuestionOnly', 'VQASyncNet', 'VQASyncNetConfig', 'VQATransformer',
     'PhaseBind', 'PhaseBindConfig', 'OscField', 'OscFieldConfig', 'ObjectTokenizer',
+    'FieldSync', 'FieldSyncConfig', 'BusNet', 'BusNetConfig',
 ]

@@ -1,0 +1,20 @@
+# @package _global_
+# BUSNET on PIXELS, no identities -- 2 runs. Image in: a CNN grid and slot
+# attention with six exchangeable slots (no colour keys, no partition,
+# shared cell); the slots are the modules on the bus at d=4, phase vs
+# open. The row for the baseline table.
+# READ: test_binding/obj_coverage and module_purity first (did the slots
+# find the objects?), then the phase-vs-open gap.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  encoder: {name: slots, ch: 128, hidden: 64}
+  per_module_gru: false
+  phase_repr: vector
+  osc_dim: 4
+
+hydra:
+  sweeper:
+    params:
+      model.bus_phase: phase,open

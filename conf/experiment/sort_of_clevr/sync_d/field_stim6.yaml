@@ -1,0 +1,12 @@
+# @package _global_
+# PIXELS, all-synchrony: oscillator field + phase slot attention in
+# perception, d=6 + stimulus on the bus. The stretch cell.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  phase_repr: vector
+  osc_dim: 6
+  drive: stimulus

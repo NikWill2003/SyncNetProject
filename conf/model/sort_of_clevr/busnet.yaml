@@ -1,0 +1,31 @@
+defaults:
+  - sort_of_clevr_busnet_base
+  - _self_
+
+# BusNet on the standard task: six object modules + one head that holds only
+# the question, all on ONE bus with phase-coded demodulation
+# (src/models/busnet.py). Nothing reaches the answer except through the bus.
+name: sort_of_clevr_busnet
+n_questions: 1
+obj_size: 5
+tok_dim: 64
+n_modules: 6
+module_dim: 96
+per_module_gru: true
+T: 8
+dt: 0.5
+medium: bus               # bus | channels
+bus_phase: phase          # bus: phase | open | zero
+quadrature: true          # read cos and sin channels (I/Q)
+echo_cancel: true
+gate_mode: attn           # channels only: attn | open | zero
+msg_dim: 4
+coupling: mlp             # mlp | none
+drive: none               # none | stimulus
+theta_init: random        # random | learned | zero
+omega_init: 0.5
+learn_omega: true
+readout: head             # head | sum
+head_transmits: true
+hidden_dim: 128
+use_prior_head: true

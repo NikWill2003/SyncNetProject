@@ -1,0 +1,22 @@
+# @package _global_
+# BUSNET all-synchrony -- 2 runs. Oscillator field over the image, PHASE
+# slot attention (slots compete for cells by phase alignment only; the
+# field must segregate objects for a slot to carry anything), the slot's
+# bus phase initialised from its object's field phase, then the bus at
+# d=4: phase vs open. Binding by synchrony in perception, communication
+# by synchrony on the bus.
+# READ: test_binding/obj_coverage, module_purity, within_obj_R vs
+# between_obj_align (did the field segregate?), then the phase-vs-open gap.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  phase_repr: vector
+  osc_dim: 4
+
+hydra:
+  sweeper:
+    params:
+      model.bus_phase: phase,open

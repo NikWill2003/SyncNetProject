@@ -159,3 +159,64 @@ The screen is not parameter-matched (canonical 0.33M; v2 1.15M; PhaseBind
 1.22M on the grid, 0.99M on objects; OscField 0.15-0.33M; RelNet 0.63M,
 transformer 0.58M). That is fine for a mechanism screen; matching belongs
 to the claims pass, once the screen says which cells deserve seeds.
+
+
+## Follow-up models (FieldSync, BusNet) and the two dev notebooks
+
+    src/models/osc_core.py                          NEW  OscField's dynamics as a reusable OscillatorField
+                                                         (osc_field.py untouched: runs in flight import it)
+    src/models/fieldsync.py                         NEW  FieldSync: modules over an oscillator field
+    src/tasks/sort_of_clevr/models/fieldsync.py     NEW  wrapper, registered as sort_of_clevr_fieldsync
+    conf/model/sort_of_clevr/fieldsync.yaml         NEW
+    src/models/busnet.py                            NEW  BusNet: object modules on a shared bus,
+                                                         phase demodulation; asker readout; msg_dim=1
+    src/tasks/sort_of_clevr/data/pairwise.py        NEW  two-question pairwise generator (disjoint pairs)
+    notebooks/dev_fieldsync.ipynb                   NEW  quick test: field / lam0 / static / attn / open / zero
+    notebooks/dev_busnet.ipynb                      NEW  quick test: bus phase / open / zero, channels attn,
+                                                         msg_dim sweep; alignment + phase-trajectory figure
+    src/models/__init__.py, src/tasks/sort_of_clevr/models/__init__.py   CHANGED  exports / registry
+    src/tasks/sort_of_clevr/callbacks/{interventions,binding_analysis}.py CHANGED  results also stashed on
+                                                         the trainer (trainer.intervention_results,
+                                                         trainer.binding_results) for notebooks without wandb
+    tools/test_callbacks.py                         CHANGED  covers FieldSync
+
+FieldSync: anchor by content, read by phase with a FIXED lambda (lam=0 is
+the content-only ablation), gate = sigmoid(a <phi_i, phi_j> + b) read off
+the field; gate_mode field | attn | open | zero; the sync callback bundle
+applies unchanged. BusNet: forward(images, questions (B, n_q, 18)) ->
+logits (B, n_q, 2); medium bus | channels; bus_phase phase | open | zero;
+phase_override zero | shuffle | freeze; metrics same_q_align,
+cross_q_align, n_clusters_eff. The pairwise task's no-communication floor
+is ~.60 (the asker's own position is informative), not .50.
+
+The notebooks were executed end-to-end here (BusNet fully on CPU at tiny
+sizes; FieldSync through the real Trainer + callbacks on a 120-scene
+generated split), so the wiring is verified; the accuracies they print
+at 3k steps are a ranking, not a result.
+
+Note: the dev notebook's train() helper passed forward_args= to Trainer,
+which this version of the repo does not accept; both new notebooks omit it.
+
+
+## BusNet on the standard task, and the phase dimension
+
+    src/models/busnet.py                            CHANGED  (B, 18) questions -> (B, 10) logits; head readout;
+                                                             phase_repr angle | vector (S^{d-1}, receiver-centred
+                                                             frame with d channels); rx_channels
+    src/tasks/sort_of_clevr/models/busnet.py        NEW      registered as sort_of_clevr_busnet
+    conf/model/sort_of_clevr/busnet.yaml            NEW
+    conf/experiment/sort_of_clevr/sync_c/*.yaml     NEW      11 files, 23 runs (bus / channels / stimulus /
+                                                             dim 2,3,4,6,8 / dim static / dim+stimulus /
+                                                             omega / dyn / width / learned theta0)
+    run_sync_c.sh                                   NEW      ~85 min per run (measured), ~33 h
+    notebooks/dev_busnet_soc.ipynb                  NEW      quick test incl. d=3 / d=6 arms
+    callbacks/interventions.py                      CHANGED  + phase_zero (the open bus at test time)
+
+The angle path (phase_repr=angle, the default) is the original scalar
+implementation and is unchanged, so the runs already launched from
+busnet_bus stay comparable; the d-sweep uses phase_repr=vector for every
+d including 2. On the standard task the circle bus aggregates
+(count_same_shape .98) and addresses one bit (query_shape .99) but does
+not move a position to the head (left_of_centre / top_half at chance),
+with R = .93 (open-bus behaviour); the dimension and stimulus cells are
+the ones that can change that.

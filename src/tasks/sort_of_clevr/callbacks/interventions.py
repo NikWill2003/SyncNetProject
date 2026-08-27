@@ -11,6 +11,7 @@ over the same batches is logged, overall and per question family.
     gate_shuffle   another sample's gate         was the gate input-dependent?
     phase_freeze   no phase dynamics
     phase_shuffle  module phases permuted        did phase identity matter?
+    phase_zero     all phases set to 0           BusNet: the open bus at test time
     tok_freeze     token phases not evolved      (PhaseBind)
     tok_shuffle    token phases permuted         (PhaseBind / OscField:
                                                   destroys the binding)
@@ -50,6 +51,7 @@ DEFAULT_INTERVENTIONS: list[dict[str, str]] = [
     {'name': 'gate_shuffle', 'gate_override': 'shuffle'},
     {'name': 'phase_freeze', 'phase_override': 'freeze'},
     {'name': 'phase_shuffle', 'phase_override': 'shuffle'},
+    {'name': 'phase_zero', 'phase_override': 'zero'},
     {'name': 'tok_freeze', 'phase_override': 'freeze_tokens'},
     {'name': 'tok_shuffle', 'phase_override': 'shuffle_tokens'},
     {'name': 'lambda0', 'phase_override': 'lambda0'},
@@ -152,6 +154,7 @@ class sort_of_clevr_interventions_callback(BaseCallBack):
                 results[f'{n}_{sname}_drop'] = base[sname] - r[sname]
             table[n] = {k: base[k] - r[k] for k in base}
         trainer.summary(section(results, 'interventions'), 'test')
+        trainer.intervention_results = results   # readable without wandb (notebooks)
         self._fig(trainer, table)
 
     def _fig(self, trainer: Trainer, table: dict[str, dict[str, float]]) -> None:

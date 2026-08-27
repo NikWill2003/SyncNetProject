@@ -1,0 +1,13 @@
+# @package _global_
+# CAPACITY control 2/3 -- 1 run. The circle with a wider wire: d=2 (vector
+# implementation) and msg_dim=8, i.e. 2 x 8 = 16 numbers per receiver, the
+# same as d=4 at width 4. If this lifts ternary too, the d-sweep is raw
+# bandwidth; if it stays at the floor, the extra numbers have to arrive on
+# distinct orientations.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+  osc_dim: 2
+  msg_dim: 8

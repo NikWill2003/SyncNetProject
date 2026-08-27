@@ -1,0 +1,12 @@
+# @package _global_
+# BUSNET dynamics -- 4 runs. Steps x quadrature. More steps give a sweeping
+# head more senders to visit; without the sin channel the circle offers one
+# clean channel per step instead of two.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.T: 8,16
+      model.quadrature: true,false

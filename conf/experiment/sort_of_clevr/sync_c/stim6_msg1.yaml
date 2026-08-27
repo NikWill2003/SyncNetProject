@@ -1,0 +1,11 @@
+# @package _global_
+# FOLLOW-UP 2/3 -- 1 run. d=6 + stimulus with a one-scalar bus: is the gain
+# addressing (survives) or bandwidth (collapses).
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+  osc_dim: 6
+  drive: stimulus
+  msg_dim: 1

@@ -49,6 +49,14 @@ configs = {
     'phasebind_objects': ['experiment=sort_of_clevr/sync_b/pb_objects', 'model.partition=none', 'model.gate_mode=phase'],
     'osc_field': ['experiment=sort_of_clevr/sync_b/osc_field', 'model.readout=sync', 'model.coupling=conv'],
     'osc_field_content': ['experiment=sort_of_clevr/sync_b/osc_field', 'model.readout=content', 'model.coupling=none'],
+    'fieldsync': ['model=sort_of_clevr/fieldsync', 'callbacks=sort_of_clevr/sync'],
+    'fieldsync_attn_lam0': ['model=sort_of_clevr/fieldsync', 'callbacks=sort_of_clevr/sync', 'model.gate_mode=attn', 'model.lam=0'],
+    'busnet': ['experiment=sort_of_clevr/sync_c/busnet_bus', 'model.bus_phase=phase'],
+    'busnet_channels': ['experiment=sort_of_clevr/sync_c/busnet_channels'],
+    'busnet_d6': ['experiment=sort_of_clevr/sync_c/busnet_dim', 'model.osc_dim=6'],
+    'busnet_pixels': ['experiment=sort_of_clevr/sync_c/busnet_pixels_bus', 'model.bus_phase=phase'],
+    'busnet_slots': ['experiment=sort_of_clevr/sync_c/busnet_slots_bus', 'model.bus_phase=phase'],
+    'busnet_field': ['experiment=sort_of_clevr/sync_c/busnet_field_bus', 'model.bus_phase=phase'],
 }
 for name, ov in configs.items():
     cfg, model, out, sup = run(['task=sort_of_clevr'] + ov)

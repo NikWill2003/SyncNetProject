@@ -1,0 +1,11 @@
+# @package _global_
+# BUSNET on PIXELS, no identities -- 1 run. Same slot front-end with
+# per-sender attention: the fair ceiling (same perception, private lines).
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  encoder: {name: slots, ch: 128, hidden: 64}
+  per_module_gru: false
+  medium: channels
+  gate_mode: attn

@@ -1,0 +1,10 @@
+# @package _global_
+# BUSNET on PIXELS 2/2 -- 1 run. Same colour-keyed CNN front-end with
+# per-sender attention: the ceiling on pixels.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  medium: channels
+  gate_mode: attn

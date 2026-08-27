@@ -269,6 +269,7 @@ class sort_of_clevr_binding_analysis_callback(BaseCallBack):
 
         metrics['n_samples'] = float(B)
         trainer.summary(section(metrics, 'binding'), 'test')
+        trainer.binding_results = metrics        # readable without wandb (notebooks)
         self._log_figs(trainer, figs)
 
     # ------------------------------------------------------------------

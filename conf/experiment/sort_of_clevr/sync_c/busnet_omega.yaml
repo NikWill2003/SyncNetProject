@@ -1,0 +1,10 @@
+# @package _global_
+# BUSNET phase formation 2/3 -- 1 run. Natural frequencies fixed with real
+# spread: senders drift through the head's phase on different steps
+# (time-division multiplexing by construction).
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  learn_omega: false
+  omega_init: 2.0

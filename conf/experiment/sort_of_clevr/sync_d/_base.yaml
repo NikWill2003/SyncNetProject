@@ -1,0 +1,36 @@
+# @package _global_
+# Shared settings for the sync_d screen: BusNet on RAW PIXELS. Same recipe as
+# sync_c (100k steps, bs 256, full analysis bundle). Distinct from every
+# sync_c cell (those are object-token models), so nothing here repeats the
+# claims pass.
+defaults:
+  - override /model: sort_of_clevr/busnet
+  - override /callbacks: sort_of_clevr/sync
+
+train:
+  seed: 0
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+wandb:
+  tags: [sync_d]
+
+hydra:
+  mode: MULTIRUN

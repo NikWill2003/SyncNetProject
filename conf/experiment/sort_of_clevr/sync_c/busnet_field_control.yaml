@@ -1,0 +1,14 @@
+# @package _global_
+# BUSNET all-synchrony control -- 1 run. Same field, slots compete by
+# phase AND content (slot_read=both). If this beats phase-only by a lot,
+# the field is not segregating objects by phase and the slots are being
+# carried by content.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  phase_repr: vector
+  osc_dim: 4
+  slot_read: both

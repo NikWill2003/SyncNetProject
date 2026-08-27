@@ -1,0 +1,16 @@
+# @package _global_
+# CLAIMS 4/4 -- 3 runs. Full-access private lines: every sender's message
+# in its own slot at every receiver (N x msg_dim per step). The attention
+# channel delivers one weighted 4-vector per step and is not a bandwidth
+# ceiling; this is.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  medium: channels
+  gate_mode: full
+
+hydra:
+  sweeper:
+    params:
+      train.seed: 0,1,2

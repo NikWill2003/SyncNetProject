@@ -1,0 +1,12 @@
+# @package _global_
+# BUSNET width -- 4 runs. Bus width x phase/open. On the standard task a
+# sender may need position and shape at once, so msg_dim is not forced to
+# 1; the question is where the phase advantage appears.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.bus_phase: phase,open
+      model.msg_dim: 1,16

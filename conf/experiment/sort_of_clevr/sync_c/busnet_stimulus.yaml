@@ -1,0 +1,8 @@
+# @package _global_
+# BUSNET phase formation 1/3 -- 1 run. Stimulus drive: a module sets its
+# own phase from its state (it knows whether the question names it).
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  drive: stimulus

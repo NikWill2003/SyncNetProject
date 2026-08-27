@@ -1,0 +1,30 @@
+defaults:
+  - sort_of_clevr_fieldsync_base
+  - _self_
+
+# FieldSync: modules over an oscillator field -- anchor by content, read by
+# phase (fixed weight), gate read off the field (src/models/fieldsync.py).
+name: sort_of_clevr_fieldsync
+q_conditioning: film
+hidden: 48
+n_down: 2
+field_ch: 64
+osc_dim: 4
+n_groups: 16
+T_field: 8
+dt: 1.0
+ksize: 5
+coupling: conv
+stimulus: true
+z_init: feature
+n_modules: 4
+module_dim: 128
+T: 4
+per_module_gru: true
+lam: 4.0
+gate_mode: field          # field | attn | open | zero
+gate_zero_diag: true
+msg_dim: 64
+content_dim: 32
+readout_mode: sum
+hidden_dim: 128

@@ -1,0 +1,8 @@
+# @package _global_
+# PIXELS, attention-from-state read, open bus (time-division by amplitude).
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  bus_phase: open

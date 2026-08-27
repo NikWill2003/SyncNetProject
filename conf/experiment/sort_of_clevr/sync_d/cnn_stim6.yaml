@@ -1,0 +1,12 @@
+# @package _global_
+# PIXELS, attention-from-state read (colour-keyed: module k learns to find
+# its object on the CNN grid from its state + identity), the object-level
+# positive cell: d=6 vector phases + stimulus drive. Pass train.seed.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  phase_repr: vector
+  osc_dim: 6
+  drive: stimulus

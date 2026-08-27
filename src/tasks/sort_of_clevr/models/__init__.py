@@ -10,6 +10,8 @@ from .film import SortOfClevrFiLM, SortOfClevrFiLMConfig
 from .relnet import SortOfClevrRelNet, SortOfClevrRelNetConfig
 from .phasebind import SortOfClevrPhaseBind, SortOfClevrPhaseBindConfig
 from .osc_field import SortOfClevrOscField, SortOfClevrOscFieldConfig
+from .fieldsync import SortOfClevrFieldSync, SortOfClevrFieldSyncConfig
+from .busnet import SortOfClevrBusNet, SortOfClevrBusNetConfig
 
 MODELS: dict[str, ModelSpec] = {
     'sort_of_clevr_transformer': ModelSpec(
@@ -44,6 +46,14 @@ MODELS: dict[str, ModelSpec] = {
         config=SortOfClevrOscFieldConfig,
         model_class=SortOfClevrOscField,
     ),
+    'sort_of_clevr_fieldsync': ModelSpec(
+        config=SortOfClevrFieldSyncConfig,
+        model_class=SortOfClevrFieldSync,
+    ),
+    'sort_of_clevr_busnet': ModelSpec(
+        config=SortOfClevrBusNetConfig,
+        model_class=SortOfClevrBusNet,
+    ),
 }
 
 # superseded models live in .legacy and are deliberately NOT registered
@@ -60,4 +70,6 @@ __all__ = [
     'SortOfClevrRelNet', 'SortOfClevrRelNetConfig',
     'SortOfClevrPhaseBind', 'SortOfClevrPhaseBindConfig',
     'SortOfClevrOscField', 'SortOfClevrOscFieldConfig',
+    'SortOfClevrFieldSync', 'SortOfClevrFieldSyncConfig',
+    'SortOfClevrBusNet', 'SortOfClevrBusNetConfig',
 ]

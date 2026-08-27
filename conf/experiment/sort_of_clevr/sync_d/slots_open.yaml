@@ -1,0 +1,9 @@
+# @package _global_
+# PIXELS, slot attention, open bus.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: slots, ch: 128, hidden: 64}
+  per_module_gru: false
+  bus_phase: open

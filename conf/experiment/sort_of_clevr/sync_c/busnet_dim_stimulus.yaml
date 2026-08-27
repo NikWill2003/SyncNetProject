@@ -1,0 +1,15 @@
+# @package _global_
+# BUSNET dimension + stimulus -- 2 runs. Vector phases at d=3 and d=6 with
+# the stimulus drive, so a module can set its own axis from its state
+# (the queried object can move off the crowd's axis in one learnable map).
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+  drive: stimulus
+
+hydra:
+  sweeper:
+    params:
+      model.osc_dim: 3,6

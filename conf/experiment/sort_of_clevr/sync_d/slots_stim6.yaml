@@ -1,0 +1,12 @@
+# @package _global_
+# PIXELS, exchangeable slot attention (no colour keys, no identity), d=6 +
+# stimulus.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: slots, ch: 128, hidden: 64}
+  per_module_gru: false
+  phase_repr: vector
+  osc_dim: 6
+  drive: stimulus

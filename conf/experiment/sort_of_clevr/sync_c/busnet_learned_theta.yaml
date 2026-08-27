@@ -1,0 +1,8 @@
+# @package _global_
+# BUSNET phase formation 3/3 -- 1 run. Learned initial phases: a persistent
+# address per module.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  theta_init: learned

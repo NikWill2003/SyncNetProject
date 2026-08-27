@@ -1,0 +1,16 @@
+# @package _global_
+# BUSNET bus -- 3 runs. One bus, six objects and a head that hears nothing
+# else. phase: demodulate by phase; open: every phase zero, the head gets
+# the plain sum; zero: silent bus (the floor: the head knows only the
+# question).
+# READ: eval_model/head_own_align vs head_other_align (head in phase with
+# the queried object(s), out of phase with the rest?), head_tvar (does the
+# head sweep senders over steps?), test_interventions/phase_zero_drop (the
+# open bus at test time).
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+hydra:
+  sweeper:
+    params:
+      model.bus_phase: phase,open,zero

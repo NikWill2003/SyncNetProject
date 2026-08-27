@@ -15,7 +15,7 @@ def cells(exp):
     return [[f'{k}={v}' for k, v in zip(keys, combo)] for combo in itertools.product(*vals)] if keys else [[]]
 
 total = 0; t_all = time.time()
-for group in ['sync_a', 'sync_b']:
+for group in ['sync_a', 'sync_b', 'sync_c', 'sync_d']:
     for f in sorted(glob.glob(f'conf/experiment/sort_of_clevr/{group}/*.yaml')):
         name = os.path.basename(f)[:-5]
         if name.startswith('_'): continue

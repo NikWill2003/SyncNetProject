@@ -1,0 +1,19 @@
+# @package _global_
+# BUSNET on PIXELS 1/2 -- 2 runs. Colour-keyed slots on a CNN grid (module k
+# learns to read colour k's object: content plus positional embedding),
+# then the bus at d=4, phase vs open. This is the version that goes in the
+# same table as FiLM, RelNet and the transformer.
+# READ: test_binding/obj_coverage and module_purity (does module k read
+# object k), then the phase-vs-open gap against the object-token d=4 runs.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  encoder: {name: cnn, ch: 128, hidden: 64}
+  phase_repr: vector
+  osc_dim: 4
+
+hydra:
+  sweeper:
+    params:
+      model.bus_phase: phase,open

@@ -1,0 +1,16 @@
+# @package _global_
+# BUSNET dimension control -- 1 run. d=6 with learned, non-evolving
+# addresses (no coupling, no drift): each object can take a fixed axis, so
+# the bus is private lines and phase is a static address. If this matches
+# the objects-attention model (.91 ternary), everything the d-sweep gains
+# above the circle is addressing capacity, not dynamics.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+  osc_dim: 6
+  theta_init: learned
+  coupling: none
+  learn_omega: false
+  omega_init: 0.0

@@ -1,0 +1,9 @@
+# @package _global_
+# BUSNET ceiling -- 1 run. Per-sender access restored (attention gate over
+# private channels); everything else identical.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  medium: channels
+  gate_mode: attn

@@ -1,0 +1,15 @@
+# @package _global_
+# CAPACITY control 3/3 -- 1 run. d=4 with learned, frozen axes (no
+# coupling, no drift): fixed identity codes. If it matches the dynamic d=4
+# run, the offsets are static addresses and the Kuramoto step contributes
+# nothing; if it falls short, the dynamics adapt the codes per question.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+  osc_dim: 4
+  theta_init: learned
+  coupling: none
+  learn_omega: false
+  omega_init: 0.0

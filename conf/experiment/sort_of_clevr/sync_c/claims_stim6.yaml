@@ -1,0 +1,16 @@
+# @package _global_
+# CLAIMS 1/4 -- 2 runs (seeds 1, 2; seed 0 = .916 / .769 ternary exists).
+# d=6 vector phases with the stimulus drive: the one cell where a phase
+# mechanism trained from scratch beat its non-phase counterparts.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+  osc_dim: 6
+  drive: stimulus
+
+hydra:
+  sweeper:
+    params:
+      train.seed: 1,2

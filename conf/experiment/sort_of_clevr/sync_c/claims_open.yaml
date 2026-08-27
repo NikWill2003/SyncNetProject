@@ -1,0 +1,13 @@
+# @package _global_
+# CLAIMS 3/4 -- 2 runs (seeds 1, 2; seed 0 = .847 / .619). The open bus:
+# time-division by amplitude with no phase at all.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  bus_phase: open
+
+hydra:
+  sweeper:
+    params:
+      train.seed: 1,2

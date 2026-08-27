@@ -1,0 +1,8 @@
+# @package _global_
+# FOLLOW-UP 3/3 -- 1 run. Clean rerun of the circle phase bus (angle
+# implementation); the original was killed at ~55k steps with no test.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  bus_phase: phase
