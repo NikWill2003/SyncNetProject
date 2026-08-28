@@ -1,0 +1,21 @@
+# @package _global_
+# Scaled configuration with STATIC learned addresses: the same-capacity control for the scaled cell.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  phase_repr: vector
+  n_modules: 8
+  osc_dim: 8
+  msg_dim: 8
+  module_dim: 128
+  T: 12
+  field_T: 12
+  slot_iters: 4
+  theta_init: learned
+  coupling: none
+  learn_omega: false
+  omega_init: 0.0
+  drive: none

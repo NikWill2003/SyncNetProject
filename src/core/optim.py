@@ -33,6 +33,23 @@ def build_lr_scheduler(
                 **optim_cfg.lr_scheduler_params
             )
 
+        case 'warmup_stable_decay':
+            params = dict(optim_cfg.lr_scheduler_params)
+            warmup = int(params.pop('warmup_steps', max(1, n_steps // 50)))
+            warmup = max(1, min(warmup, n_steps - 2))
+            decay = int(params.pop('decay_steps', max(1, int(n_steps * float(params.pop('decay_frac', 0.2))))))
+            decay = max(1, min(decay, n_steps - warmup - 1))
+            stable_end = n_steps - decay
+            return SequentialLR(
+                optim,
+                schedulers=[
+                    LinearLR(optim, start_factor=1e-8, end_factor=1.0, total_iters=warmup),
+                    ConstantLR(optim, factor=1.0, total_iters=stable_end - warmup),
+                    CosineAnnealingLR(optim, T_max=decay, **params),
+                ],
+                milestones=[warmup, stable_end],
+            )
+
         case 'warmup_cosine':
 
             params = dict(optim_cfg.lr_scheduler_params)

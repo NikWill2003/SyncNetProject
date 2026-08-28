@@ -1,0 +1,17 @@
+# @package _global_
+# The scaled configuration (M=8, d=8, msg 8, dm 128, T 12, field_T 12, 4 slot iterations). Pass train.seed and train.n_steps.
+defaults:
+  - /experiment/sort_of_clevr/sync_d/_base
+  - _self_
+model:
+  encoder: {name: field}
+  per_module_gru: false
+  phase_repr: vector
+  drive: stimulus
+  n_modules: 8
+  osc_dim: 8
+  msg_dim: 8
+  module_dim: 128
+  T: 12
+  field_T: 12
+  slot_iters: 4

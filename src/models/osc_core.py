@@ -13,6 +13,8 @@ this file duplicates the ~40 lines rather than refactoring them.
 
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -46,10 +48,11 @@ class OscillatorField(nn.Module):
     def __init__(self, fch: int, osc_dim: int = 4, n_groups: int = 16, T: int = 8,
                  dt: float = 1.0, ksize: int = 5, coupling: str = 'conv',
                  stimulus: bool = True, learn_omega: bool = True,
-                 omega_scale: float = 0.1, z_init: str = 'feature') -> None:
+                 omega_scale: float = 0.1, z_init: str = 'feature', step_max_deg: float = 0.0) -> None:
         super().__init__()
         self.d, self.K, self.C = osc_dim, n_groups, osc_dim * n_groups
         self.T, self.dt = T, dt
+        self.step_max_deg = step_max_deg
         self.coupling, self.stimulus, self.z_init = coupling, stimulus, z_init
         self.omega_scale = omega_scale
         self.z_head = nn.Conv2d(fch, self.C, 1)
@@ -107,7 +110,14 @@ class OscillatorField(nn.Module):
                     drive = drive + self.J(z)
                 if c is not None:
                     drive = drive + c
-                z = self.normalise(z + self.dt * (self.rotate(z) + self.tangent(z, drive)))
+                vel = self.rotate(z) + self.tangent(z, drive)
+                if self.step_max_deg > 0:
+                    Bz, Cz, Sz, _ = z.shape
+                    step = (self.dt * vel).view(Bz, self.K, self.d, Sz, Sz)
+                    cap = math.tan(math.radians(self.step_max_deg))
+                    n = step.norm(dim=2, keepdim=True)
+                    vel = (step * torch.clamp(cap / (n + 1e-8), max=1.0)).view(Bz, Cz, Sz, Sz) / self.dt
+                z = self.normalise(z + self.dt * vel)
                 if return_trace:
                     trace.append(z.detach())
         return (z, trace) if return_trace else z

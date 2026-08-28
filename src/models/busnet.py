@@ -112,6 +112,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+import math
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -177,6 +179,11 @@ class BusNetConfig(ModelConfig):
     drive: str = 'none'                 # none | stimulus
     theta_init: str = 'random'          # random | learned | zero
     phase_repr: str = 'angle'           # angle (scalar theta, original) | vector (z on S^{d-1})
+    # exploratory levers (defaults = exactly the current model)
+    phase_step_max_deg: float = 0.0     # cap the per-step rotation of a bus phase (0 = off)
+    stim_ema: float = 0.0               # EMA of the stimulus direction across steps (0 = off)
+    head_taps: int = 1                  # head rows per question; >1 = parallel listening phases
+    field_step_max_deg: float = 0.0     # cap the per-step rotation of a field oscillator (0 = off)
     osc_dim: int = 2                    # vector only: d
     rx_channels: int = 0                # vector only: frame vectors read (0 = all d)
     omega_init: float = 0.5
@@ -287,15 +294,16 @@ class BusNet(nn.Module):
         self.cfg = cfg
         M, dm, Nq = cfg.n_modules, cfg.module_dim, cfg.n_questions
         self.M, self.dm, self.Nq, self.T = M, dm, Nq, cfg.T
-        self.n_heads = Nq if cfg.readout == 'head' else 0
+        self.taps = max(1, cfg.head_taps) if cfg.readout == 'head' else 1
+        self.n_heads = Nq * self.taps if cfg.readout == 'head' else 0
         self.N = M + self.n_heads                       # rows on the bus
         q_all = Nq * cfg.q_size
         self.obj_tok = ObjectTokenizer(object_colours, img_size, cfg.obj_size)
-        if self.obj_tok.n_objects != M:
-            raise ValueError('n_modules must equal the number of objects')
         enc = dict(cfg.encoder)
         name = enc.get('name', 'objects')
         self.objects = name == 'objects'
+        if self.objects and self.obj_tok.n_objects != M:
+            raise ValueError('n_modules must equal the number of objects on the objects front end')
         self.slots = name == 'slots'
         self.field_fe = name == 'field'
         if self.field_fe:
@@ -308,7 +316,8 @@ class BusNet(nn.Module):
             self.grid_film_gamma = nn.Linear(Nq * cfg.q_size, fch)
             self.grid_film_beta = nn.Linear(Nq * cfg.q_size, fch)
             self.field = OscillatorField(fch, cfg.field_osc_dim, cfg.field_groups, cfg.field_T, cfg.field_dt,
-                                         cfg.field_ksize, cfg.field_coupling, cfg.field_stimulus, True, 0.1, 'feature')
+                                         cfg.field_ksize, cfg.field_coupling, cfg.field_stimulus, True, 0.1, 'feature',
+                                         step_max_deg=cfg.field_step_max_deg)
             self.phase_slots = PhaseSlotAttention(fch, cfg.tok_dim, M, cfg.field_groups, cfg.field_osc_dim,
                                                   cfg.slot_iters, cfg.slot_beta, content=(cfg.slot_read == 'both'))
             if cfg.slot_read not in ('phase', 'both'):
@@ -342,7 +351,7 @@ class BusNet(nn.Module):
             self.spatial = None
         if self.n_heads:
             self.head_init = nn.Sequential(nn.Linear(cfg.q_size, 64), nn.GELU(), nn.Linear(64, dm))
-            self.head_embed = nn.Parameter(torch.randn(Nq, dm) / dm ** 0.5)
+            self.head_embed = nn.Parameter(torch.randn(Nq * self.taps, dm) / dm ** 0.5)
         if self.objects:
             self.obj_embed = nn.Linear(self.obj_tok.feat_dim, cfg.tok_dim)
         if (self.slots or self.field_fe) and cfg.per_module_gru:
@@ -419,7 +428,7 @@ class BusNet(nn.Module):
         # readout: a head module per question listens on the bus; or the asker
         # (first-named module) answers; or every module votes
         if cfg.readout == 'head':
-            self.head_out = nn.Sequential(nn.Linear(dm + cfg.q_size, cfg.hidden_dim), nn.GELU(),
+            self.head_out = nn.Sequential(nn.Linear(dm * self.taps + cfg.q_size, cfg.hidden_dim), nn.GELU(),
                                           nn.Linear(cfg.hidden_dim, answer_dim))
         elif cfg.readout == 'asker':
             self.asker_head = nn.Sequential(nn.Linear(dm + cfg.q_size, cfg.hidden_dim), nn.GELU(),
@@ -486,7 +495,15 @@ class BusNet(nn.Module):
             pull = torch.einsum('bij,bjd->bid', self.K.to(z.dtype).unsqueeze(0) * kap, z)
             vel = vel + tangent(z, pull)
         if cfg.drive == 'stimulus':
-            vel = vel + tangent(z, self.stim(h))
+            s = self.stim(h)
+            if cfg.stim_ema > 0:
+                self._stim_state = s if self._stim_state is None else cfg.stim_ema * self._stim_state + (1 - cfg.stim_ema) * s
+                s = self._stim_state
+            vel = vel + tangent(z, s)
+        if cfg.phase_step_max_deg > 0:
+            cap = math.tan(math.radians(cfg.phase_step_max_deg))
+            step_norm = (vel * cfg.dt).norm(dim=-1, keepdim=True)
+            vel = vel * torch.clamp(cap / (step_norm + 1e-8), max=1.0)
         return sphere_step(z, vel, cfg.dt)
 
     def _receive_vector(self, h: Tensor, z: Tensor) -> tuple[Tensor, Tensor]:
@@ -644,9 +661,10 @@ class BusNet(nn.Module):
         X = self.norm(X * (1 + self.film_gamma(q_all)).unsqueeze(1) + self.film_beta(q_all).unsqueeze(1))
         reread = (not self.objects) and (not self.slots) and (not self.field_fe) and cfg.read_every_step
         if self.n_heads:
-            h_heads = self.head_init(questions) + self.head_embed.unsqueeze(0)     # (B, Nq, dm)
+            h_heads = self.head_init(questions).repeat_interleave(self.taps, 1) + self.head_embed.unsqueeze(0)  # (B, Nq*taps, dm)
             h = torch.cat([h, h_heads], 1)
             X = torch.cat([X, torch.zeros(B, self.n_heads, X.shape[-1], device=dev, dtype=X.dtype)], 1)
+        self._stim_state = None
         if self.vector:
             z = self._init_z(B, dev, X.dtype)
             if (cfg.medium == 'bus' and cfg.bus_phase == 'open') or phase_override == 'zero':
@@ -713,7 +731,8 @@ class BusNet(nn.Module):
                 traces['attn'].append(attn_fixed)                                                        # type: ignore
 
         if cfg.readout == 'head':
-            logits = self.head_out(torch.cat([h[:, M:], questions], -1))          # (B, Nq, A)
+            h_tap = h[:, M:].reshape(B, Nq, self.taps * self.dm)                  # taps concatenated per question
+            logits = self.head_out(torch.cat([h_tap, questions], -1))             # (B, Nq, A)
         elif cfg.readout == 'asker':
             n_obj = self.obj_tok.n_objects
             asker = questions[..., :n_obj].argmax(-1)                                  # (B, Nq)
@@ -734,8 +753,12 @@ class BusNet(nn.Module):
             named = ((questions[..., :n] + questions[..., n:2 * n]) > 0).float()   # (B, Nq, M)
             zu = z if self.vector else torch.stack([torch.cos(theta), torch.sin(theta)], -1)   # (B, N, d)
             zo = zu[:, :M]
-            same = torch.einsum('bqi,bqj->bij', named, named) > 0                  # same question
-            cross = (torch.einsum('bqi,brj->bij', named, named) > 0) & ~same       # different questions
+            if named.shape[-1] == M:                       # module index <-> object identity (objects / colour keys)
+                same = torch.einsum('bqi,bqj->bij', named, named) > 0              # same question
+                cross = (torch.einsum('bqi,brj->bij', named, named) > 0) & ~same   # different questions
+            else:                                          # exchangeable slots, M != n_objects: no identity map
+                same = torch.zeros(zo.shape[0], M, M, dtype=torch.bool, device=dev)
+                cross = same
             off = ~torch.eye(M, dtype=torch.bool, device=dev)
             cosm = torch.einsum('bid,bjd->bij', zo, zo)
             ev = torch.linalg.eigvalsh(0.5 * (1 + cosm).float()).clamp(min=0)
@@ -761,7 +784,7 @@ class BusNet(nn.Module):
                 metrics['gate_tvar'] = gs[:, :, :M, :M].var(0, unbiased=False)[:, off].mean().item()
                 if self.n_heads:
                     metrics['head_tvar'] = gs[:, :, M:, :M].var(0, unbiased=False).mean().item()
-            if self.n_heads:
+            if self.n_heads and named.shape[-1] == M and self.taps == 1:
                 # is each head in phase with the pair it asks about, and out of phase with the other pair?
                 ch = torch.einsum('bqd,bmd->bqm', zu[:, M:], zo)                      # (B, Nq, M)
                 own = (ch * named).sum(-1) / named.sum(-1).clamp(min=1)
