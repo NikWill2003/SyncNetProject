@@ -1,5 +1,6 @@
 from ....core.registry import ModelSpec
 
+from .busnet import SqoopBusNet, SqoopBusNetConfig
 from .conv_lstm import SqoopConvLSTM, SqoopConvLSTMConfig
 from .film import SqoopFiLM, SqoopFiLMConfig
 from .relnet import SqoopRelNet, SqoopRelNetConfig
@@ -8,6 +9,10 @@ from .syncnet import SqoopSyncNet, SqoopSyncNetConfig
 from .transformer import SqoopTransformer, SqoopTransformerConfig
 
 MODELS: dict[str, ModelSpec] = {
+    'sqoop_busnet': ModelSpec(
+        config=SqoopBusNetConfig,
+        model_class=SqoopBusNet,
+    ),
     'sqoop_question_only': ModelSpec(
         config=SqoopQuestionOnlyConfig,
         model_class=SqoopQuestionOnly,

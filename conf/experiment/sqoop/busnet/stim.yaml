@@ -1,0 +1,5 @@
+# @package _global_
+# The canonical model: computed addresses (stimulus + coupling).
+defaults:
+  - /experiment/sqoop/busnet/_base
+  - _self_

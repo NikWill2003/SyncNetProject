@@ -298,10 +298,12 @@ class BusNet(nn.Module):
         self.n_heads = Nq * self.taps if cfg.readout == 'head' else 0
         self.N = M + self.n_heads                       # rows on the bus
         q_all = Nq * cfg.q_size
-        self.obj_tok = ObjectTokenizer(object_colours, img_size, cfg.obj_size)
+        self.obj_tok = None if object_colours is None else ObjectTokenizer(object_colours, img_size, cfg.obj_size)
         enc = dict(cfg.encoder)
         name = enc.get('name', 'objects')
         self.objects = name == 'objects'
+        if self.objects and self.obj_tok is None:
+            raise ValueError('the objects front end needs object_colours')
         if self.objects and self.obj_tok.n_objects != M:
             raise ValueError('n_modules must equal the number of objects on the objects front end')
         self.slots = name == 'slots'
@@ -749,8 +751,11 @@ class BusNet(nn.Module):
             logits = logits.squeeze(1)
 
         with torch.no_grad():
-            n = self.obj_tok.n_objects
-            named = ((questions[..., :n] + questions[..., n:2 * n]) > 0).float()   # (B, Nq, M)
+            if self.obj_tok is not None:
+                n = self.obj_tok.n_objects
+                named = ((questions[..., :n] + questions[..., n:2 * n]) > 0).float()   # (B, Nq, n)
+            else:
+                named = torch.zeros(B, Nq, 0, device=dev)                   # no object-identity layout for this task
             zu = z if self.vector else torch.stack([torch.cos(theta), torch.sin(theta)], -1)   # (B, N, d)
             zo = zu[:, :M]
             if named.shape[-1] == M:                       # module index <-> object identity (objects / colour keys)

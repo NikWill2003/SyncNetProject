@@ -1,0 +1,8 @@
+defaults:
+  - sqoop_busnet_base
+  - _self_
+
+# the canonical field-bus SyncNet on SQOOP: oscillator-field perception,
+# phase slots, d=6 vector-phase bus with the stimulus drive, head readout.
+# Questions are three one-hots over the joint vocabulary (q_size 120).
+name: sqoop_busnet
