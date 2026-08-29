@@ -11,19 +11,22 @@ def set_seed(seed):
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     random.seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
     np.random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
 
+def set_torch_config(device):
+    if device.startswith('cuda'):
+        torch.backends.cuda.matmul.allow_tf32 = True 
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True  
 
 def get_param_count(m: torch.nn.Module) -> int:
     return sum(p.numel() for p in m.parameters() if p.requires_grad)
 
 
 def move_tensor_dict(batch: dict[str, torch.Tensor], device: str):
-    non_blocking = (device == 'cuda')
+    non_blocking = device.startswith('cuda')
     
     return {
         key: item.to(device, non_blocking=non_blocking) 

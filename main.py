@@ -17,7 +17,7 @@ from src import (
 
 from src.core import Config
 from src.training import Trainer, get_wandb_init, accelerate_init_wandb
-from src.training.utils import set_seed
+from src.training.utils import set_seed, set_torch_config
 
 register_configs()
 
@@ -38,6 +38,11 @@ def main(cfg: Config) -> float:
     )
 
     device = str(accelerator.device)
+    set_torch_config(device)          
+
+    dataloaders = build_dataloaders(cfg, device)
+    model = build_model(cfg)
+
     dataloaders = build_dataloaders(cfg, device)
     model = build_model(cfg)
 
