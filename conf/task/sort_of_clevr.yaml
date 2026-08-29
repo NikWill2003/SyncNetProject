@@ -27,8 +27,9 @@ optim:
   optimiser: adamw
   lr: 3e-4
   weight_decay: 0.0
-  lr_scheduler: cosine_annealing
-  lr_scheduler_params: {}
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
 
 logging:
   train_log_interval: 100
