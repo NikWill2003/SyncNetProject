@@ -17,7 +17,7 @@ train:
 
   loader_mode: gpu_cached
   mixed_precision: 'no'
-  compile_model: false
+  compile_model: true
   grad_accum: 1
   grad_clip: 1.0
   num_workers: 0
