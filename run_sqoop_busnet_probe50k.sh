@@ -16,4 +16,5 @@ python main.py task=sqoop experiment=sqoop/busnet/stim \
   dataset.rhs_variety=18 'train.seed=0,1,2,3,4' train.n_steps=50000 \
   'wandb.tags=[sqoop_busnet,probe50k]' \
   train.train_bs=64 \
+  train.loader_mode=dataloader \
   2>&1 | tee logs/sqoop/busnet_stim_rhs18_probe50k_s0-4.log
