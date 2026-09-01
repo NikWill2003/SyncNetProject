@@ -1,0 +1,24 @@
+defaults:
+  - shared_workspace_base
+  - _self_
+
+# Shared Workspace transformer on SQOOP.
+#
+# The paper only reports Sort-of-CLEVR, so patch_size follows this
+# dataset's 64px images (8 -> 64 patches, as the other SQOOP models use)
+# rather than the paper's 5. The question is the [x, rel, y] triple
+# embedded and flattened, so the model's question projection sees
+# 3 * emb_dim rather than 18.
+name: shared_workspace
+
+q_encoder:
+  name: tokenise
+  embedding_dim: 32
+
+mem_slots: 8
+
+encoder:
+  name: patchify
+  ch: 256
+  patch_size: 8
+n_layers: 4

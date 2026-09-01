@@ -1,12 +1,13 @@
 defaults:
-  - sort_of_clevr_transformer_base
+  - transformer_base
   - _self_
 
-name: sort_of_clevr_transformer
+name: transformer
+
+q_encoder:
+  name: identity
 
 # patch encoder only:
-patch_emb_dim: 128
-patch_size: 5
 
 hidden_dim: 128
 n_heads: 4
@@ -21,3 +22,8 @@ pos_enc: learnt_2d # learnt_1d | learnt_2d
 q_conditioning: token # token | broadcast_cat | film
 
 share_layer_weights: false # false -> normal transformer, true -> looped
+
+encoder:
+  name: patchify
+  ch: 128
+  patch_size: 5

@@ -1,0 +1,70 @@
+# @package _global_
+# Is phase-gated communication load-bearing on SQOOP, and when?
+#
+#   partition=none      messages OPTIONAL -- every module sees the whole
+#                       image, so a module can answer alone
+#   partition=quadrant  messages NECESSARY -- one quadrant each
+#
+# SQOOP is the sharper version of this test than Sort-of-CLEVR. Every
+# question is relational, and the hard negatives guarantee that x and y
+# are both present with the relation holding for *some* pair, so a
+# single quadrant is never sufficient. Relevance is also sparse per
+# sample: only the quadrants holding x and y matter, and which ones
+# those are changes with the scene. Sparse per-sample relevance is the
+# condition under which the prior coalitions study showed phase becoming
+# selective rather than merely load-bearing, and it is the condition
+# uniform-relevance Sort-of-CLEVR quadrants lack.
+#
+# readout_mode=sum removes the concat head's covert cross-module
+# integration channel, leaving messages as the only integration site.
+defaults:
+  - override /model: sqoop/syncnet
+
+model:
+  q_encoder:
+    name: tokenise
+    embedding_dim: 32
+  q_conditioning: film        # <- set to the winner of conditioning.yaml
+  readout_mode: sum
+  use_prior_head: true
+  n_modules: 4                # quadrant requires exactly 4
+  module_dim: 128
+  T: 6
+
+dataset:
+  rhs_variety: 18
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+# SEEDS: 1 per cell -- a shakedown budget, not a measurement. Enough to
+# gauge throughput, memory and whether an arm trains at all. At the
+# observed sigma=0.022 a single seed cannot rank arms or resolve the
+# shape of an rhs curve; raise to 5 for screening and 15 for anything
+# that goes in the thesis.
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.partition: none,quadrant
+      model.gate_mode: phase,attn,mlp,open,frozen
+      train.seed: 0

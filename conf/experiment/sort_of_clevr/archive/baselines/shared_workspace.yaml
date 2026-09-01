@@ -1,0 +1,15 @@
+# @package _global_
+# Shared Workspace (Goyal et al., ICLR 2022) -- the workspace ablation as
+# the authors define it. The comparison that matters is TR_HSW/TR_SSW
+# (a shared workspace mediates communication) against TR/STR/TR_HC (it does
+# not), holding depth and width fixed. TR_HC gets per-layer parameters, so
+# it also controls for the capacity the shared-parameter variants give up.
+defaults:
+  - override /model: sort_of_clevr/shared_workspace
+  - _self_
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      train.seed: 0,1,2

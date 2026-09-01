@@ -1,0 +1,80 @@
+# @package _global_
+# ENCODER TEST -- 8 runs, ~2.2 h at rhs=18. The remaining hypothesis for
+# why the transformer sits at exactly ln2 on SQOOP.
+#
+# WHAT HAS BEEN RULED OUT
+#   capacity      0.58M and 14.4M both at 0.5006
+#   learning rate 3e-4 and 1e-3 both flat
+#   warmup        2k and 10k both flat
+#   readout       cls, mean and flatten all flat (CPU, 15.5k examples)
+#   vision path   the same model learns "is pixel mass left-heavier?"
+#                 from these exact images, 0.693 -> 0.299 in 800 steps
+#
+# WHAT IS LEFT
+#   PatchifyEncoder is a SINGLE strided Conv2d -- a linear projection of
+#   raw pixels per patch. sort_of_clevr objects are six COLOURS, linearly
+#   separable from pixels, and its transformer works (ternary 0.867).
+#   SQOOP objects are 36 SHAPES, all the same green, 10-15 px straddling
+#   8 px patch boundaries. Character recognition is not a linear function
+#   of a patch. The only SQOOP model that solves the task (conv_lstm,
+#   0.999) is the only one with a multi-layer conv encoder.
+#
+# If cnn escapes ln2 and patchify does not, the encoder is a CONFOUND
+# ACROSS THE WHOLE SQOOP CHAPTER, not a transformer quirk -- the syncnet
+# uses patchify too, so its 0.846 ceiling would be capped by the same
+# thing and every syncnet-vs-conv_lstm comparison would need rerunning
+# with matched encoders.
+#
+# If cnn is also flat, stop: report the transformer as failing to
+# optimise on SQOOP and let conv_lstm carry the baseline.
+#
+# READ train_loss/cross_entropy. ln2 = 0.69315.
+defaults:
+  - override /model: sqoop/transformer
+
+model:
+  q_conditioning: broadcast_cat
+  encoder:
+    patch_size: 8
+    ch: 96      # encoder.ch must match this
+  hidden_dim: 128
+  n_heads: 4
+  n_layers: 4
+  ffn_mult: 4
+  dropout: 0.0
+  q_encoder:
+    name: tokenise
+    embedding_dim: 32
+
+dataset:
+  rhs_variety: 18
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.0
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.encoder_name: patchify,cnn
+      model.q_conditioning: broadcast_cat,film
+      model.readout: cls,flatten
+      train.seed: 0

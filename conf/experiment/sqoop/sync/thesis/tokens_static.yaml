@@ -1,0 +1,8 @@
+# @package _global_
+# The isolator with stored addresses: the medium-level compositional pair.
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/token_busnet
+  - _self_
+model:
+  addresses: static

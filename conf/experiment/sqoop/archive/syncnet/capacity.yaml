@@ -1,0 +1,69 @@
+# @package _global_
+# BROAD PASS. Independent of every other config here: nothing in this
+# file is set from another sweep's winner, so these run in any order, in
+# parallel, or alone. Axes not being swept are held at a stated REFERENCE
+# POINT, not a tuned value -- read a result as "effect of this axis at
+# the reference", not as a best achievable number.
+#
+# rhs=18 throughout the broad pass: the easiest systematic split, so most
+# signal per run, and only one dataset to build (~40 min) instead of five
+# (~2.5 h). The rhs curves belong to the focused pass, once these have
+# narrowed the settings.
+#
+# 1 seed. At sigma=0.022 that ranks nothing; it screens which arms are
+# worth spending seeds on.
+#
+# Module count and width. partition=none because quadrant pins n_modules
+# to 4 -- this axis cannot be swept under a spatial partition.
+#
+# Worth having as a control: if accuracy tracks total parameters rather
+# than module structure, the coalition story is doing no work and the
+# syncnet is a funny-shaped MLP.
+defaults:
+  - override /model: sqoop/syncnet
+
+model:
+  q_encoder:
+    name: tokenise
+    embedding_dim: 32
+  q_conditioning: film   # reference point
+  partition: none
+  gate_mode: phase
+  readout_mode: concat
+  T: 6
+
+dataset:
+  rhs_variety: 18
+
+train:
+  # bs 256, 100k steps, train_size 1,080,000 -> 23.7 epochs. The previous
+  # round's 494 epochs came from the 51,840-example datasets, not the
+  # batch size. READ train_loss/cross_entropy BEFORE ACCURACY: if it
+  # reaches 0.0000 the run memorised and its eval numbers mean nothing.
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000   # fixed budget; cosine must complete
+  mixed_precision: bf16
+  loader_mode: gpu_cached          # ~13 GB VRAM at train_size=1,080,000
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.n_modules: 4,8,16
+      model.module_dim: 64,128
+      train.seed: 0

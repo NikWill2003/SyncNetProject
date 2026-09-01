@@ -1,0 +1,8 @@
+# @package _global_
+# Computed addresses (the canonical cell): the stimulus term lets each row
+# place its own phase from its state. v16 schema.
+defaults:
+  - /experiment/sqoop/busnet/_base
+  - _self_
+model:
+  addresses: computed

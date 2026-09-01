@@ -1,8 +1,17 @@
 defaults:
-  - sqoop_busnet_base
+  - busnet_base
   - _self_
 
-# the canonical field-bus SyncNet on SQOOP: oscillator-field perception,
-# phase slots, d=6 vector-phase bus with the stimulus drive, head readout.
-# Questions are three one-hots over the joint vocabulary (q_size 120).
-name: sqoop_busnet
+# The canonical SyncNet (M2). The enums below are this model's own
+# experiment -- the medium and address suites -- and nothing else (P5).
+name: busnet
+n_modules: 6
+module_dim: 96
+msg_dim: 4
+phase_dim: 6
+t_bus: 8
+dt: 0.5
+medium: bus            # bus | lines | silent
+gate: attn             # lines only: attn | full | phase
+addresses: computed    # computed | static | open
+q_onehot_vocab: 40

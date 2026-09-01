@@ -1,0 +1,36 @@
+# @package _global_
+#
+# Applied after `task` (and after `experiment`, if one is given) so the
+# debug settings always win. That ordering matters: 56 experiments set
+# train.n_steps and 55 set train.train_bs, and a smoke test that silently
+# adopts a 20,000-step budget is not a smoke test.
+
+
+train:
+  n_steps: 600
+  train_bs: 32
+  val_bs: 32
+
+  # DebugTrainer never evaluates, so nothing can trip early stopping
+  early_stop_patience: null
+
+  # grad_accum > 1 makes opt_step advance slower than total_step, which
+  # makes a short run confusing to read
+  grad_accum: 1
+  compile_model: false
+
+logging:
+  train_log_interval: 50
+  eval_log_interval: 50
+
+wandb:
+  project_name: ${dataset.name}_debug
+
+hydra:
+  run:
+    dir: outputs/debug/${dataset.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: outputs/debug/${dataset.name}/multirun/${now:%Y-%m-%d_%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false

@@ -1,0 +1,6 @@
+# @package _global_
+# M1, the gated lineage recomposed; gate=phase is the thesis arm.
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/gated
+  - _self_

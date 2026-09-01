@@ -1,0 +1,7 @@
+# @package _global_
+# M3: phase-native identity (both factors on). Single-factor arms live in
+# ../ablations.
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/identity_busnet
+  - _self_

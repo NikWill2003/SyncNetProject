@@ -1,0 +1,8 @@
+# @package _global_
+# Stored addresses: learned per-row phases, no dynamics. The control whose
+# mirror-image intervention signature proves the canonical cell computes.
+defaults:
+  - /experiment/sqoop/busnet/_base
+  - _self_
+model:
+  addresses: static

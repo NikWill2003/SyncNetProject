@@ -1,0 +1,63 @@
+# @package _global_
+# THE BASELINE COMPOSITIONALITY CURVE. The result is the SHAPE across
+# rhs_variety, not any single point, so all five rhs values must run at
+# the same settings and be plotted together.
+#
+# Without it, rhs=18 gets 18x the data of rhs=1 and the curve conflates
+# "more pair variety" with "more examples" -- which is the confound that
+# makes an rhs curve unpublishable. 51840 = 648 pairs x 80 repeats, the
+# rhs=18 size; the generator turns the cap into a per-pair repeat count
+# rounded down to a multiple of 8, so lower rhs gets proportionally more
+# repeats of fewer pairs.
+#
+# Set q_conditioning to the winner of transformer_conditioning first.
+defaults:
+  - override /model: sqoop/transformer
+
+model:
+  q_encoder:
+    name: tokenise
+    embedding_dim: 32
+  encoder:
+    ch: 96
+    patch_size: 8
+  hidden_dim: 128
+  n_heads: 4
+  n_layers: 4
+  ffn_mult: 4
+  q_conditioning: broadcast_cat   # <- winner of transformer_conditioning
+  share_layer_weights: false
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000   # fixed budget; cosine must complete
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+# SEEDS: 1 per cell -- a shakedown budget, not a measurement. Enough to
+# gauge throughput, memory and whether an arm trains at all. At the
+# observed sigma=0.022 a single seed cannot rank arms or resolve the
+# shape of an rhs curve; raise to 5 for screening and 15 for anything
+# that goes in the thesis.
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset.rhs_variety: 1,2,4,8,18
+      train.seed: 0

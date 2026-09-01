@@ -1,0 +1,14 @@
+defaults:
+  - token_busnet_base
+  - _self_
+
+# The SoC mechanism isolator: scene tokens carry colour (row index),
+# shape, and centre position, so every question family is in scope.
+name: token_busnet
+n_modules: 6
+module_dim: 96
+msg_dim: 4
+phase_dim: 6
+medium: bus
+addresses: computed
+q_onehot_vocab: null

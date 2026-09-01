@@ -12,7 +12,7 @@ class EarlyStoppingManager:
         model: nn.Module,
         val_metric: str,
         big_is_better: bool,
-        patience: int = 10,
+        patience: Optional[int] = 10,
         min_delta: float = 0.0,
         accelerator: Optional[Accelerator] = None
     ) -> None:
@@ -42,6 +42,12 @@ class EarlyStoppingManager:
             for k, v in model.state_dict().items()
         }
 
+    def check_should_stop(self) -> bool:
+        
+        if self._patience is None:
+            return False
+        return self._num_bad_steps >= self._patience
+
     def is_improvement(self, cur: float) -> bool:
         if self._big_is_better:
             return cur > self._best_val + self._min_delta
@@ -58,7 +64,7 @@ class EarlyStoppingManager:
 
         if not math.isfinite(step_val):
             self._num_bad_steps += 1
-            self._should_stop = self._num_bad_steps >= self._patience
+            self._should_stop = self.check_should_stop()
             return self.summary()
 
         if self.is_improvement(step_val):
@@ -69,7 +75,7 @@ class EarlyStoppingManager:
         else:
             self._num_bad_steps += 1
 
-        self._should_stop = self._num_bad_steps >= self._patience
+        self._should_stop = self.check_should_stop()
 
         return self.summary()
 

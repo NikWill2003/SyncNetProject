@@ -1,8 +1,12 @@
 defaults:
-  - sqoop_question_only_base
+  - question_only_base
   - _self_
 
-name: sqoop_question_only
-emb_dim: 32
+name: question_only
+
+q_encoder:
+  name: lstm
+  embedding_dim: 32
+  output_dim: 128
 hidden_dim: 128
 n_layers: 2

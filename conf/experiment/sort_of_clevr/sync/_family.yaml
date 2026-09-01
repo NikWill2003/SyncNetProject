@@ -1,0 +1,6 @@
+# @package _global_
+# The sync family: protocol + the sync analysis bundle (accuracy +
+# interventions on the best weights).
+defaults:
+  - /experiment/sort_of_clevr/_protocol
+  - override /callbacks: sort_of_clevr/sync_v16

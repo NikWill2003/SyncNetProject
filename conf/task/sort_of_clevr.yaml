@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - /dataset: sort_of_clevr/default
-  - /model: sort_of_clevr/syncnet
+  - /model: sort_of_clevr/busnet
   - /callbacks: sort_of_clevr/default
   - _self_
 

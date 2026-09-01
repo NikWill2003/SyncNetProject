@@ -1,0 +1,22 @@
+defaults:
+  - shared_workspace_base
+  - _self_
+
+# Shared Workspace transformer (Goyal et al., ICLR 2022), vendored from the
+# authors' release. Settings follow their run_transformer.sh for
+# Sort-of-CLEVR: h_dim 256, 4 layers, patch 5, mem_slots 8.
+#
+# The question reaching the model here is the raw 18-dim vector (identity
+# question encoder), so the constructed module matches the original.
+name: shared_workspace
+
+q_encoder:
+  name: identity
+
+mem_slots: 8
+
+encoder:
+  name: patchify
+  ch: 256
+  patch_size: 5
+n_layers: 4

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Build every dataset the campaign needs, in parallel: Sort-of-CLEVR once,
+# SQOOP once per rhs variety (18 = certification default, 1/2/4/8 = the
+# generalisation sweep, 35 = the near-exhaustive control). Idempotent.
+# Per-job logs in bash_scripts/logs/. Edit the rhs list to trim the sweep.
+set -u
+cd "$(dirname "$0")/.."
+mkdir -p bash_scripts/logs
+rm -f bash_scripts/logs/.failed
+
+prep() {  # prep <name> <hydra overrides...>
+  local n=$1; shift
+  if python -m scripts.prepare_dataset "$@" > "bash_scripts/logs/$n.log" 2>&1
+  then echo "ok   $n"
+  else echo "FAIL $n  (bash_scripts/logs/$n.log)"; touch bash_scripts/logs/.failed
+  fi
+}
+
+prep sort_of_clevr task=sort_of_clevr &
+for rhs in 1 2 4 8 18 35; do
+  prep sqoop_rhs$rhs task=sqoop dataset.rhs_variety=$rhs &
+done
+wait
+[ ! -e bash_scripts/logs/.failed ]

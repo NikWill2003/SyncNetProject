@@ -1,0 +1,21 @@
+defaults:
+  - conv_base
+  - _self_
+
+# Conv+LSTM, the baseline from Bahdanau et al. 2019. The question is the
+# [x, rel, y] token triple, so an LSTM over the embedded tokens encodes
+# it. One embedding table for all three positions, so a shape means the
+# same thing as the x and as the y.
+name: conv
+
+q_encoder:
+  name: lstm
+  embedding_dim: 32
+  output_dim: 128
+
+hidden_dim: 256
+
+encoder:
+  name: cnn
+  ch: 128
+  hidden: 64

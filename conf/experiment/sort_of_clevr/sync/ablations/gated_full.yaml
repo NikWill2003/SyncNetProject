@@ -1,0 +1,8 @@
+# @package _global_
+# Gated arm: gate=full (the L2 competitor / the bandwidth ceiling).
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/gated
+  - _self_
+model:
+  gate: full

@@ -1,0 +1,8 @@
+# @package _global_
+# SoC mechanism isolator. Stored scenes are colour-row centres only (no
+# shape attributes): position-dependent families in scope, shape subtypes
+# out by data -- reported as such.
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/token_busnet
+  - _self_

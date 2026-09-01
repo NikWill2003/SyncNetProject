@@ -1,0 +1,21 @@
+# @package _global_
+# BUSNET dimension -- 5 runs. Phases as unit vectors on S^{d-1}, read
+# through a receiver-centred orthonormal frame (d channels; in-phase /
+# quadrature is d=2). d is the medium's simultaneous capacity: the circle
+# separates two senders at once, S^{d-1} separates d, and at d >= 6 every
+# object can sit on its own axis (private lines). The prior coalitions
+# study showed the circle cannot realise frustrated graphs and d=3 can;
+# here the relational questions need the head to hear 5-6 senders.
+# READ: binary / ternary accuracy against d (expect a lift towards d=6),
+# eval_model/n_clusters_eff (how many groups the modules form),
+# head_own_align vs head_other_align.
+defaults:
+  - /experiment/sort_of_clevr/sync_c/_base
+  - _self_
+model:
+  phase_repr: vector
+
+hydra:
+  sweeper:
+    params:
+      model.osc_dim: 2,3,4,6,8

@@ -1,3 +1,1 @@
-- name: accuracy
-- name: qtype_accuracy
-- name: subtype_accuracy
+- name: accuracy   # overall, per family, per subtype

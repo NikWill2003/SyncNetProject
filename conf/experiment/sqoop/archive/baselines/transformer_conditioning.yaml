@@ -1,0 +1,64 @@
+# @package _global_
+# The SQOOP half of the Sort-of-CLEVR conditioning result. Run at fixed
+# rhs=18 (the easiest split) to pick the arm the rhs curve then uses --
+# running the curve before fixing conditioning would confound a
+# generalisation axis with a fusion-architecture axis.
+#
+# token_seq is SQOOP-only: [x, rel, y] enters as three sequence
+# positions rather than one flattened vector. On Sort-of-CLEVR it
+# degenerates to token, which is why that sweep has three arms and this
+# one has four.
+defaults:
+  - override /model: sqoop/transformer
+
+model:
+  q_encoder:
+    name: tokenise
+    embedding_dim: 32
+  encoder:
+    ch: 96
+  hidden_dim: 128
+  n_heads: 4
+  n_layers: 4
+  ffn_mult: 4
+  dropout: 0.0
+  pos_enc: learnt_2d
+  share_layer_weights: false
+
+dataset:
+  rhs_variety: 18
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000   # fixed budget; cosine must complete
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+# SEEDS: 1 per cell -- a shakedown budget, not a measurement. Enough to
+# gauge throughput, memory and whether an arm trains at all. At the
+# observed sigma=0.022 a single seed cannot rank arms or resolve the
+# shape of an rhs curve; raise to 5 for screening and 15 for anything
+# that goes in the thesis.
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model.q_conditioning: film,broadcast_cat,token,token_seq
+      model.encoder.patch_size: 4,8
+      train.seed: 0

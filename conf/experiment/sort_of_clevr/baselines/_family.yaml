@@ -1,0 +1,6 @@
+# @package _global_
+# The comparison set: protocol only, accuracy callbacks from the task
+defaults:
+  - /experiment/sort_of_clevr/_protocol
+# default. Model yamls carry the published forms; strengthened variants live in
+# scratch/, never as silent upgrades.

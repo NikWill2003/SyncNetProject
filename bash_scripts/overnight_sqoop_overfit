@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Run the whole overfit sweep on THIS machine's one GPU, one spec after
+# another. Invoke on box A:   bash bash_scripts/overnight_sqoop_overfit
+# (box B runs overnight_soc_singles). A CRASH prints FAIL; the LOSS each
+# run reaches is the morning read -- floors (silent, open, t_bus=1) are
+# included deliberately and are NOT expected to hit zero.
+# Logs: bash_scripts/logs/sqoop_overfit/.   SKIP_PREP=1 keeps existing data.
+set -u
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/sqoop_overfit
+mkdir -p "$LOG"
+
+if [ "${SKIP_PREP:-0}" != 1 ]; then
+  rm -rf data/sqoop-* data/sort_of_clevr-*
+  bash_scripts/prepare_datasets_parallel || exit 1
+fi
+
+STEPS=${STEPS:-1500}
+MODELS=(
+  # ==== M2 chassis: medium x addresses ================================
+  "model=sqoop/busnet"
+  "model=sqoop/busnet model.addresses=static"
+  "model=sqoop/busnet model.addresses=open"
+  "model=sqoop/busnet model.medium=silent"
+  "model=sqoop/busnet model.medium=lines model.gate=attn"
+  "model=sqoop/busnet model.medium=lines model.gate=full"
+  "model=sqoop/busnet model.medium=lines model.gate=phase"
+  "model=sqoop/busnet model.medium=lines model.gate=phase model.addresses=static"
+  "model=sqoop/busnet model.medium=lines model.gate=phase model.addresses=open"
+  # ==== identity: factors x media =====================================
+  "model=sqoop/identity_busnet"
+  "model=sqoop/identity_busnet model.per_module_anchors=false"
+  "model=sqoop/identity_busnet model.private_cells=false"
+  "model=sqoop/identity_busnet model.addresses=static"
+  "model=sqoop/identity_busnet model.medium=silent"
+  "model=sqoop/identity_busnet model.medium=lines model.gate=attn"
+  "model=sqoop/identity_busnet model.medium=lines model.gate=full"
+  "model=sqoop/identity_busnet model.medium=lines model.gate=phase"
+  # ==== token isolator ================================================
+  "model=sqoop/token_busnet"
+  "model=sqoop/token_busnet model.addresses=static"
+  "model=sqoop/token_busnet model.addresses=open"
+  "model=sqoop/token_busnet model.medium=silent"
+  "model=sqoop/token_busnet model.medium=lines model.gate=attn"
+  "model=sqoop/token_busnet model.medium=lines model.gate=phase"
+  "model=sqoop/token_busnet model.phase_dim=2"
+  "model=sqoop/token_busnet model.phase_dim=8"
+  "model=sqoop/token_busnet model.t_bus=1"
+  "model=sqoop/token_busnet model.t_bus=16"
+  "model=sqoop/token_busnet model.msg_dim=1"
+  # ==== gated =========================================================
+  "model=sqoop/gated"
+  "model=sqoop/gated model.gate=attn"
+  "model=sqoop/gated model.gate=full"
+  "model=sqoop/gated model.grid=1"
+  "model=sqoop/gated model.grid=3"
+  "model=sqoop/gated model.grid=4"
+  "model=sqoop/gated model.phase_dim=4"
+  "model=sqoop/gated model.t_steps=1"
+  "model=sqoop/gated model.t_steps=16"
+  "model=sqoop/gated model.dt=0.1"
+  "model=sqoop/gated model.dt=1.0"
+  "model=sqoop/gated model.msg_dim=4"
+  "model=sqoop/gated model.msg_dim=64"
+  "model=sqoop/gated model.module_dim=48"
+  "model=sqoop/gated model.module_dim=192"
+  # ==== M2 capacity, depth, timestep ==================================
+  "model=sqoop/busnet model.phase_dim=2"
+  "model=sqoop/busnet model.phase_dim=3"
+  "model=sqoop/busnet model.phase_dim=4"
+  "model=sqoop/busnet model.phase_dim=8"
+  "model=sqoop/busnet model.phase_dim=12"
+  "model=sqoop/busnet model.msg_dim=1"
+  "model=sqoop/busnet model.msg_dim=8"
+  "model=sqoop/busnet model.msg_dim=16"
+  "model=sqoop/busnet model.n_modules=1"
+  "model=sqoop/busnet model.n_modules=2"
+  "model=sqoop/busnet model.n_modules=3"
+  "model=sqoop/busnet model.n_modules=8"
+  "model=sqoop/busnet model.n_modules=12"
+  "model=sqoop/busnet model.module_dim=48"
+  "model=sqoop/busnet model.module_dim=192"
+  "model=sqoop/busnet model.t_bus=1"
+  "model=sqoop/busnet model.t_bus=2"
+  "model=sqoop/busnet model.t_bus=4"
+  "model=sqoop/busnet model.t_bus=16"
+  "model=sqoop/busnet model.dt=0.1"
+  "model=sqoop/busnet model.dt=1.0"
+  "model=sqoop/busnet model.dt=2.0"
+  # ==== combined stress ===============================================
+  "model=sqoop/busnet model.phase_dim=8 model.n_modules=8"
+  "model=sqoop/busnet model.n_modules=8 model.phase_dim=8 model.module_dim=192 model.msg_dim=8 model.t_bus=16"
+  "model=sqoop/busnet model.n_modules=3 model.phase_dim=2 model.module_dim=48 model.msg_dim=1 model.t_bus=2"
+  # ==== optimiser and numerics ========================================
+  "model=sqoop/busnet optim.lr=1e-4"
+  "model=sqoop/busnet optim.lr=1e-3"
+  "model=sqoop/busnet optim.lr=3e-3"
+  "model=sqoop/busnet train.train_bs=256"
+  "model=sqoop/token_busnet train.train_bs=256"
+  "model=sqoop/busnet train.mixed_precision=no"
+  "model=sqoop/busnet train.seed=1"
+  "model=sqoop/busnet train.seed=2"
+  # ==== compile-path smoke ============================================
+  "model=sqoop/busnet train.compile_model=true"
+)
+
+FAILED=0
+for spec in "${MODELS[@]}"; do
+  name=$(echo "$spec" | sed 's|model=sqoop/||' | tr ' =./' '_')
+  if python -m scripts.debug task=sqoop train.n_steps=$STEPS \
+       train.compile_model=false $spec > "$LOG/$name.log" 2>&1
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+
+echo; echo "== final log lines (the loss each config reached) =="
+for f in "$LOG"/*.log; do printf -- '-- %s\n' "${f##*/}"; tail -n 2 "$f"; done
+exit $FAILED

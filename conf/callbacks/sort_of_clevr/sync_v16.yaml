@@ -1,0 +1,6 @@
+# v16 sync analysis bundle: accuracy + the intervention suite. t_variance
+# is deliberately omitted -- it sweeps `t_override`, which the v16 models
+# do not yet honour (they would silently ignore it and log flat curves);
+# add it back the day the forward takes T at test time.
+- name: accuracy
+- name: interventions

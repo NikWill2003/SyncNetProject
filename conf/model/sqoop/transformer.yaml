@@ -1,13 +1,14 @@
 defaults:
-  - sqoop_transformer_base
+  - transformer_base
   - _self_
 
-name: sqoop_transformer
-emb_dim: 32
+name: transformer
+
+q_encoder:
+  name: tokenise
+  embedding_dim: 32
 
 # patch_emb_dim must stay < hidden_dim for broadcast_cat
-patch_emb_dim: 96
-patch_size: 8
 
 hidden_dim: 128
 n_heads: 4
@@ -21,3 +22,8 @@ pos_enc: learnt_2d
 q_conditioning: broadcast_cat
 
 share_layer_weights: false
+
+encoder:
+  name: patchify
+  ch: 96
+  patch_size: 8

@@ -1,0 +1,8 @@
+# @package _global_
+# Ablation: one axis moved off the canonical cell (addresses:open).
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/busnet
+  - _self_
+model:
+  addresses: open

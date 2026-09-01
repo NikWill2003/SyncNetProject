@@ -1,0 +1,26 @@
+# Overfit a single batch, via debug.py.
+#
+#   python -m scripts.debug                                   # sort_of_clevr
+#   python -m scripts.debug task=sqoop
+#   python -m scripts.debug task=sqoop model=sqoop/relnet
+#   python -m scripts.debug task=sort_of_clevr model.n_modules=4
+#
+# Two checks in one run:
+#   1. optimisation sanity -- can this model drive the loss to ~0 on one
+#      batch? If not, the problem is the architecture, the loss wiring or
+#      the gradient path, and no amount of real training will fix it.
+#   2. pipeline smoke -- does wandb init, does accelerator.log fire, do
+#      summaries land, does the hydra output dir get written.
+#
+# Runs land in outputs/debug/ and log to a separate <dataset>_debug wandb
+# project, so smoke runs never touch the real ones.
+
+defaults:
+  - config_schema
+  - _self_
+  - task: sort_of_clevr
+  - optional experiment: null
+  - _debug_overrides
+
+train:
+  seed: 0

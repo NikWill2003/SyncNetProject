@@ -1,0 +1,5 @@
+# @package _global_
+defaults:
+  - /experiment/sort_of_clevr/baselines/_family
+  - override /model: sort_of_clevr/relnet
+  - _self_

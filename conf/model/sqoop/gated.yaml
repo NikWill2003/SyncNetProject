@@ -1,0 +1,14 @@
+defaults:
+  - gated_base
+  - _self_
+
+# M1: the gated lineage recomposed (P5: this model's experiment only).
+name: gated
+grid: 2
+module_dim: 96
+msg_dim: 16
+phase_dim: 2
+t_steps: 8
+dt: 0.5
+gate: phase            # phase | attn | full
+q_onehot_vocab: 40

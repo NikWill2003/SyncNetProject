@@ -1,0 +1,9 @@
+# @package _global_
+# M3: phase-native identity (both factors on). Single-factor arms live in
+# ../ablations.
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  n_modules: 6

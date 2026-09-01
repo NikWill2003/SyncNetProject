@@ -1,0 +1,6 @@
+# @package _global_
+# M1, the gated lineage recomposed; gate=phase is the thesis arm.
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/gated
+  - _self_

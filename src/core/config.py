@@ -38,7 +38,11 @@ class TrainConfig:
 
     early_stop_metric: str = 'loss'  # options: 'loss', 'accuracy'
     early_stop_big_is_better: bool = False
-    early_stop_patience: int = 10
+    # None -> never stop early (infinite patience). Best-model tracking
+    # stays on regardless: main() returns `best_{early_stop_metric}` as the
+    # hydra sweeper objective, so disabling the manager itself would make
+    # every sweep silently optimise 0.0.
+    early_stop_patience: int | None = 10
     early_stop_min_delta: float = 0.0
 
     mixed_precision: str = 'no'  # options: 'no', 'bf16', 'fp16'
@@ -77,6 +81,8 @@ class OptimConfig:
 
     lr_scheduler: str = 'cosine_annealing' # warmup_cosine or cosine_annealing or constant
     lr_scheduler_params: dict[str, Any] = field(default_factory=dict)
+
+
 
 
 @dataclass

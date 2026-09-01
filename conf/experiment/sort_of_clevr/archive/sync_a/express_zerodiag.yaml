@@ -1,0 +1,12 @@
+# @package _global_
+# EXPRESSIBILITY 3/3 -- 1 run. Sharpened gate with the self-message
+# removed (g_ii = 0, as in the prior coalitions study). With g_ii = 1
+# every module always hears itself, which halves the effect of any other
+# channel under mean aggregation.
+defaults:
+  - /experiment/sort_of_clevr/sync_a/_base
+  - _self_
+
+model:
+  gate_sharpen: true
+  gate_zero_diag: true

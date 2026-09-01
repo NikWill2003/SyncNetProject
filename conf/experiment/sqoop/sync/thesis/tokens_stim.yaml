@@ -1,0 +1,8 @@
+# @package _global_
+# The mechanism isolator, computed addresses: scenes in, same medium.
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/token_busnet
+  - _self_
+model:
+  addresses: computed

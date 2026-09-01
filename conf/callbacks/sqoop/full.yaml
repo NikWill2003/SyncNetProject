@@ -1,3 +1,6 @@
+# Needs 'sync' in the model's `supported_callbacks`; no model declares
+# it yet, so this bundle raises at build until the sync models are
+# rewritten. Kept because the t_variance sweep is still wanted.
 - name: accuracy
 - name: t_variance
   t_values: [0, 1, 2, 4, 6, 8, 12, 16]

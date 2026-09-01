@@ -1,149 +1,132 @@
-"""Task registry: specs describing each task and the builders that turn a
-resolved config into runtime objects (model, dataloaders, callbacks, loss).
-
-A task contributes a `TaskSpec` (see `tasks/<task>/__init__.py`); everything
-else in the codebase goes through the builders below and never imports task
-packages directly.
-"""
-
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Callable, Iterator
+from typing import Callable, Iterator
 
 import torch
 import torch.nn as nn
+from hydra.core.config_store import ConfigStore
+from omegaconf import OmegaConf
 from torch import Tensor
 from torch.utils.data import DataLoader
-from omegaconf import OmegaConf
-from hydra.core.config_store import ConfigStore
 
-from .config import Config, DataConfig, ModelConfig, CallbackConfig
-from .callbacks import BaseCallBack, CallBackList
+from .config import Config
+from .callbacks import CallBackList
 
 OnDeviceIter = Iterator[dict[str, torch.Tensor]]
 Loaders = tuple[DataLoader | OnDeviceIter, ...]
-
-# types
 LossFn = Callable[[dict, dict], tuple[Tensor, dict[str, float]]]
-LossBuilder = Callable[[], LossFn]
-
-
-@dataclass(frozen=True)
-class ModelSpec:
-    config: type[ModelConfig]
-    model_class: type[nn.Module]
-
-@dataclass(frozen=True)
-class CallbackSpec:
-    config: type[CallbackConfig]
-    callback_class: type[BaseCallBack]
-
-
-@dataclass(frozen=True)
-class TaskSpec:
-    name: str  # matches cfg.dataset.name
-
-    data_config: type[DataConfig]
-    # (cfg, device) -> (train, val, test) loaders
-    dataloader_builder: Callable[[Config, str], Loaders]
-    # build the on-disk dataset from its data config
-    prepare: Callable[[Any], None]
-
-    models: dict[str, ModelSpec]
-    callbacks: dict[str, CallbackSpec]
-
-    loss_builder: LossBuilder
-
-
-def get_task(cfg: Config) -> TaskSpec:
-    from ..tasks import TASKS
-    task = TASKS.get(cfg.dataset.name)
-    if task is None:
-        raise ValueError(
-            f'unknown dataset: {cfg.dataset.name!r} '
-            f'(registered: {sorted(TASKS)})'
-        )
-    return task
 
 
 def register_configs() -> None:
-    cs = ConfigStore.instance()
+    from ..datasets import DATASETS
+    from ..models import MODELS
 
-    from omegaconf import OmegaConf
-    OmegaConf.register_new_resolver(
-        'join',
-        lambda xs, sep='-': sep.join(str(x) for x in xs),
-        replace=True,
-    )
+    cs = ConfigStore.instance()
 
     cs.store(name='config_schema', node=Config)
 
-    from ..tasks import TASKS
-    for task in TASKS.values():
+    for dataset in DATASETS.values():
+        cs.store(group='dataset', name=f'{dataset.NAME}_base',
+                 node=dataset.DATA_CONFIG)
 
-        cs.store(
-            group='dataset',
-            name=f'{task.name}_base',
-            node=task.data_config,
+    for name, (config, _) in MODELS.items():
+        cs.store(group='model', name=f'{name}_base', node=config)
+
+
+def get_dataset(cfg: Config):
+    from ..datasets import DATASETS
+
+    dataset = DATASETS.get(cfg.dataset.name)
+    if dataset is None:
+        raise ValueError(
+            f'unknown dataset: {cfg.dataset.name!r} (available: {sorted(DATASETS)})'
         )
+    return dataset
 
-        for model_name, spec in task.models.items():
-            cs.store(
-                group='model',
-                name=f'{model_name}_base',
-                node=spec.config,
-            )
 
 def build_model(cfg: Config) -> nn.Module:
-    task = get_task(cfg)
+    from ..models import MODELS
 
-    spec = task.models.get(cfg.model.name)
-    if spec is None:
+    name = str(cfg.model.name)
+    entry = MODELS.get(name)
+    if entry is None:
         raise ValueError(
-            f'{cfg.model.name!r} is not a supported model for {task.name} '
-            f'(supported: {sorted(task.models)})'
+            f'unknown model: {name!r} (available: {sorted(MODELS)})'
+        )
+    _, model_class = entry
+    dataset = get_dataset(cfg)
+    return model_class.from_config(
+        cfg.model, dataset.NAME, int(dataset.ANSWER_DIM)
         )
 
-    return spec.model_class.from_config(cfg.model, cfg.dataset)  # type: ignore
 
+def build_callbacks(cfg: Config, model=None):
 
-def build_callbacks(cfg: Config) -> CallBackList:
-    task = get_task(cfg)
+    from .callbacks import SHARED_CALLBACKS
+
+    dataset = get_dataset(cfg)
+    dataset_callbacks = getattr(dataset, 'CALLBACKS', {})
+
+    overlap = set(SHARED_CALLBACKS) & set(dataset_callbacks)
+    if overlap:
+        raise ValueError(f'duplicate callback(s) in {dataset.NAME}: {sorted(overlap)}')
+
+    available = {**SHARED_CALLBACKS, **dataset_callbacks}
+    offered = frozenset(getattr(model, 'supported_callbacks', ()))
 
     callbacks = []
     for cb_cfg in cfg.callbacks:
-
-        spec = task.callbacks.get(cb_cfg.name)
+        spec = available.get(cb_cfg.name)
         if spec is None:
+            raise ValueError(f'unknown callback {cb_cfg.name!r}; available: {sorted(available)}')
+
+        missing = spec.requires - offered
+        if missing:
             raise ValueError(
-                f'unrecognised callback {cb_cfg.name!r} '
-                f'for dataset {cfg.dataset.name!r} '
-                f'(supported: {sorted(task.callbacks)})'
+                f'callback {cb_cfg.name!r} requires {sorted(missing)}, '
+                f'but {type(model).__name__} supports {sorted(offered)}'
             )
 
-        typed_cb_cfg = OmegaConf.merge(OmegaConf.structured(spec.config), cb_cfg)
-
-        callbacks.append(spec.callback_class.from_config(cfg, typed_cb_cfg)) # type: ignore
+        typed = OmegaConf.merge(OmegaConf.structured(spec.config), cb_cfg)
+        callbacks.append(spec.callback_class.from_config(cfg, typed))  # type: ignore
 
     return CallBackList(callbacks)
 
 
 def build_dataloaders(cfg: Config, device: str) -> Loaders:
-    return get_task(cfg).dataloader_builder(cfg, device)
+
+    name = str(cfg.dataset.name)
+    if name == 'sort_of_clevr':
+        from ..datasets.soc.loader import build_dataloaders as _build
+    elif name == 'sqoop':
+        from ..datasets.sqoop.loader import build_dataloaders as _build
+    else:
+        raise ValueError(f'unknown dataset: {name!r}')
+    return _build(cfg, device) # type: ignore
 
 
 def build_loss_fn(cfg: Config) -> LossFn:
-    loss_fn = get_task(cfg).loss_builder()
 
-    def with_total(out: dict, batch: dict) -> tuple[Tensor, dict[str, float]]:
-        loss, metrics = loss_fn(out, batch)
-        metrics = dict(metrics)
-        metrics['loss'] = loss.item()
-        return loss, metrics
+    ce_loss = nn.CrossEntropyLoss()
+    
+    def cross_entropy(
+        out: dict, batch: dict,
+        ) -> tuple[Tensor, dict[str, float]]:
 
-    return with_total
+        loss = ce_loss(out['logits'].float(), batch['answers'])
+        return loss, {'loss': loss.item()}
+
+    return cross_entropy
 
 
 def prepare_dataset(cfg: Config) -> None:
-    get_task(cfg).prepare(cfg.dataset)
+    """Generate the on-disk splits. Dispatches like build_dataloaders: the
+    generator belongs to the dataset, not to its spec."""
+    name = str(cfg.dataset.name)
+    if name == 'sort_of_clevr':
+        from ..datasets.soc.generator import prepare_sort_of_clevr as _prepare
+    elif name == 'sqoop':
+        from ..datasets.sqoop.generator import prepare_sqoop as _prepare
+    else:
+        raise ValueError(f'unknown dataset: {name!r}')
+    _prepare(cfg.dataset)

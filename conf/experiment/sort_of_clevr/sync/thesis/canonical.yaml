@@ -1,0 +1,6 @@
+# @package _global_
+# M2, the canonical SyncNet. Seeds at launch: train.seed=0,1,2.
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/busnet
+  - _self_

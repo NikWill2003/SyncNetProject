@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - /dataset: sqoop/default
-  - /model: sqoop/syncnet
+  - /model: sqoop/busnet
   - /callbacks: sqoop/default
   - _self_
 

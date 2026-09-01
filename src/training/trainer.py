@@ -20,20 +20,15 @@ from .logging import (
     MultiAverageMeter,
 )
 
-from .utils import (
+from ..utils import (
     batch_iter,
     get_batch_dict_size,
     get_param_count,
+    cuda_sync
 )
 from ..core.callbacks import CallBackList
 
 from ..core import Config
-
-
-def _sync() -> None:
-
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
 
 
 class Trainer:
@@ -203,7 +198,7 @@ class Trainer:
         mode: Literal['eval', 'test']
         ) -> dict[str, float]:
 
-        _sync()
+        cuda_sync()
         start = time.perf_counter()
 
         self.model.eval()
@@ -228,7 +223,7 @@ class Trainer:
 
             eval_metrics.update(batch_metrics, n=get_batch_dict_size(batch))
 
-        _sync()
+        cuda_sync()
         return (
             eval_metrics.get_averages() | 
             section({'eval_s': time.perf_counter()-start}, 'timing')
@@ -258,12 +253,12 @@ class Trainer:
 
         self.should_stop = False
         
-        _sync()
+        cuda_sync()
         self.step_interval_start = time.perf_counter()
         self.tot_training_time = 0
 
     def on_train_log_hit(self) -> None:
-        _sync()
+        cuda_sync()
         cur_training_time = (
             self.tot_training_time + time.perf_counter() - self.step_interval_start
             )
@@ -278,7 +273,7 @@ class Trainer:
         self.train_meter.reset()
 
     def on_eval_hit(self) -> None:
-        _sync()
+        cuda_sync()
         self.tot_training_time += time.perf_counter() - self.step_interval_start
 
         eval_metrics = self.evaluate(

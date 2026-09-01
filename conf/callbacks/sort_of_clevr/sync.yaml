@@ -1,23 +1,14 @@
-# Analysis bundle for the synchrony screens. Every run gets:
-#   accuracy / qtype / subtype   the usual metrics, every eval
-#   interventions                test-time gate swap / phase freeze on the
-#                                best weights: accuracy drops overall, per
-#                                family and per subtype + a heatmap figure
-#   t_variance                   test-time T sweep (overall, binary,
-#                                ternary) with a figure
-#   binding_analysis             what modules read / how gates form / how
-#                                phases move: gate heatmaps by family,
-#                                attention maps, R(t), module x object
-#                                matrix, token phase maps -- each backed by
-#                                scalar metrics (test_binding/*)
+# Analysis bundle for the synchrony screens.
+#   accuracy        overall, per family, per subtype -- every eval
+#   interventions   test-time gate swap / phase freeze on the best
+#                   weights, plus a heatmap figure
+#   t_variance      test-time T sweep + figure
+#
+# interventions and t_variance need 'sync' in the model's
+# `supported_callbacks`; on any other model this bundle raises at build.
 - name: accuracy
-- name: qtype_accuracy
-- name: subtype_accuracy
 - name: interventions
 - name: t_variance
   t_values: [0, 1, 2, 4, 6, 8, 12, 16]
   n_repeats: 3
   max_batches: 8
-- name: binding_analysis
-  max_batches: 4
-  n_examples: 3

@@ -1,0 +1,81 @@
+# @package _global_
+# TRANSFORMER OPTIMISATION DIAGNOSTIC -- 8 runs at rhs=18, ~2 h.
+#
+# Why: all 16 arms of baselines/transformer finished at train cross-entropy
+# 0.6924-0.6932 against ln2 = 0.69315, with train accuracy 0.50. The model
+# did not fit even the training set, across 4 conditionings x 2 patch sizes
+# x 2 depths.
+#
+# It is NOT a wiring fault. On a fixed 512-example subset the same model
+# drives train loss 0.693 -> 0.042 in 1000 steps (conv_lstm: -> 0.000).
+# Gradients reach every parameter and the question pathway conditions. So
+# the failure is optimisation on the real task, and the four things that
+# differ between that harness and the sweep are swept here.
+#
+#   lr             1e-3 escaped the plateau in the harness; the sweep used
+#                  3e-4. The syncnet and conv_lstm have inductive biases --
+#                  spatial partition, position-preserving flatten -- that
+#                  give them gradient signal a bag-of-patches transformer
+#                  has to discover, so they are not evidence 3e-4 is fine.
+#   warmup         2k steps of warmup at a point where there is no signal
+#                  to warm up into.
+#   precision      the other two models used bf16 and were fine, but a
+#                  norm_first transformer with near-zero attention logits
+#                  early in training is the most bf16-sensitive thing here.
+#
+# READ ONE NUMBER: train_loss/cross_entropy. Below ~0.6 means the plateau
+# was escaped; re-run the full 16-arm conditioning sweep at those settings.
+# If all 8 stay at ln2, that is the finding, not a bug -- report it as the
+# attention baseline needing an inductive bias the syncnet supplies
+# structurally, and note SQOOP is known to have a hard optimisation
+# landscape where models sit at chance indefinitely.
+defaults:
+  - override /model: sqoop/transformer
+
+model:
+  q_encoder:
+    name: tokenise
+    embedding_dim: 32
+  q_conditioning: broadcast_cat
+  encoder:
+    ch: 96
+    patch_size: 8
+  hidden_dim: 128
+  n_heads: 4
+  n_layers: 4
+  ffn_mult: 4
+  dropout: 0.0          # 0.0, not 0.1: this is a can-it-fit test
+  pos_enc: learnt_2d
+  share_layer_weights: false
+
+dataset:
+  rhs_variety: 18
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.0     # 0.0 for the same reason as dropout
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      optim.lr: 3e-4,1e-3
+      optim.lr_scheduler_params.warmup_steps: 2000,10000
+      train.mixed_precision: bf16,no
+      train.seed: 0

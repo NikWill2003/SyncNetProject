@@ -1,0 +1,9 @@
+# @package _global_
+# Ablation: one axis moved off the canonical cell (medium:lines,gate:attn).
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/busnet
+  - _self_
+model:
+  medium: lines
+  gate: attn

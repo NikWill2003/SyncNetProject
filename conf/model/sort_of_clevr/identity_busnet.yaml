@@ -1,0 +1,15 @@
+defaults:
+  - identity_busnet_base
+  - _self_
+
+# M3: the canonical model with identity moved into phase space.
+name: identity_busnet
+n_modules: 6
+module_dim: 96
+msg_dim: 4
+phase_dim: 6
+medium: bus
+addresses: computed
+private_cells: true
+per_module_anchors: true
+q_onehot_vocab: null

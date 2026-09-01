@@ -1,0 +1,55 @@
+# @package _global_
+# IID CONTROL -- rhs_variety=35, 3 runs, ~40 min.
+#
+# Every one of the 36*35 ordered pairs is a training pair, so nothing is
+# held out and there is no systematic component at all. Both eval and
+# test read val_seen: training pairs in fresh scenes.
+#
+# Why it matters: without it a low score on the rhs curve is unattributable.
+# A syncnet at 0.85 might be failing the RELATION or failing to generalise
+# across PAIRS, and those need different responses. This point pins the
+# ceiling -- whatever a model scores here is the most it can do on SQOOP
+# when generalisation is not being asked of it, and every rhs point below
+# should be read as a delta from it.
+#
+# It is also the paper's rightmost bar (35 rhs/lhs), where every model
+# including Conv+LSTM has near-zero error -- so it doubles as a check that
+# our port is not harder than theirs for some unintended reason.
+#
+# rhs=35 is a special case in the generator: with no unseen pairs the
+# val_unseen and test_unseen splits do not exist, and it raises unless
+# both split settings point at val_seen.
+# No model override: this is a dataset+schedule overlay, so pass the model
+# on the command line and run it once per architecture.
+#   python -m scripts.main task=sqoop experiment=sqoop/baselines/iid_control \
+#          model=sqoop/conv
+dataset:
+  rhs_variety: 35
+
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      train.seed: 0

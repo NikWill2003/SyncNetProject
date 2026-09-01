@@ -5,18 +5,10 @@ defaults:
 name: sqoop
 seed: 0
 root: ./data
-dir: ${dataset.name}-seed${dataset.seed}-train${dataset.train_size}-test${dataset.test_size}-rhs${dataset.rhs_variety}-img${dataset.img_size}-objs${dataset.num_objects}-minobj${dataset.min_obj_size}-maxobj${dataset.max_obj_size}
+dir: ${dataset.name}-seed${dataset.seed}-train${dataset.train_size}-test${dataset.test_size}-rhs${dataset.rhs_variety}
 
 # total examples:
 train_size: 1_080_000
 test_size: 25_600
 
 rhs_variety: 18
-
-eval_split: val_seen # early stopping must not peek at unseen pairs
-test_split: test_unseen
-
-img_size: 64
-num_objects: 5
-min_obj_size: 10
-max_obj_size: 15

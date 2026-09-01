@@ -1,0 +1,8 @@
+# @package _global_
+# Identity single-factor arm (the interaction claim needs it).
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  per_module_anchors: false

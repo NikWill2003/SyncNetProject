@@ -1,0 +1,35 @@
+# @package _global_
+# CNN+MLP, the control from Santoro et al. 2017. The question is encoded by
+# an MLP and meets the image only at the head, so there is no mechanism for
+# comparing two objects. Expect the non-relational questions solved and the
+# relational ones at chance -- that gap is what the routing models exist to
+# close.
+defaults:
+  - override /model: sort_of_clevr/conv
+
+train:
+  n_steps: 100_000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_patience: 1_000_000
+  mixed_precision: bf16
+  loader_mode: gpu_cached
+  grad_clip: 1.0
+
+optim:
+  lr: 3e-4
+  weight_decay: 0.0
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2_000
+
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  save_best: true
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      train.seed: 0,1,2

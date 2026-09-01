@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, TYPE_CHECKING, cast
+from typing import Any, Literal, TYPE_CHECKING
 from pathlib import Path
 import math
 from collections import defaultdict
@@ -8,12 +8,11 @@ import hashlib
 
 import torch.nn as nn
 from accelerate import Accelerator
-import wandb
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
 from hydra.types import RunMode
 
-from .utils import get_param_count
+from ..utils import get_param_count
 
 if TYPE_CHECKING:
     from ..core.config import Config
@@ -145,12 +144,6 @@ def cmdline_format_metrics(metrics: dict) -> str:
     return '|'.join(
         [f' {m} : {v:.4f} ' for m, v in metrics.items() if isinstance(v, (float, int))]
         )
-
-
-def wandb_finish(wandb_run: Optional[wandb.Run]) -> None:
-
-    if wandb_run is not None:
-        wandb_run.finish()
 
 
 class MultiAverageMeter:

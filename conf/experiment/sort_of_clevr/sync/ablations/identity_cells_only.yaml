@@ -1,0 +1,8 @@
+# @package _global_
+# Identity single-factor arm (the interaction claim needs it).
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+  - override /model: sort_of_clevr/identity_busnet
+  - _self_
+model:
+  per_module_anchors: false

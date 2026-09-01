@@ -1,0 +1,8 @@
+# @package _global_
+# M2, the canonical SyncNet. Seeds at launch: train.seed=0,1,2.
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/busnet
+  - _self_
+model:
+  n_modules: 6

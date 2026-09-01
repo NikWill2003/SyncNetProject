@@ -1,0 +1,5 @@
+# @package _global_
+defaults:
+  - /experiment/sqoop/baselines/_family
+  - override /model: sqoop/relnet
+  - _self_

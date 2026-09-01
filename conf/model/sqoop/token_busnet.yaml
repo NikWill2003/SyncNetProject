@@ -1,0 +1,14 @@
+defaults:
+  - token_busnet_base
+  - _self_
+
+# The mechanism isolator: scenes in, no encoder constructed. Own model
+# group so no override can turn a pixel run into a token run.
+name: token_busnet
+n_modules: 5
+module_dim: 96
+msg_dim: 4
+phase_dim: 6
+medium: bus
+addresses: computed
+q_onehot_vocab: 40

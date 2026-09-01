@@ -1,0 +1,8 @@
+# @package _global_
+# Gated arm: gate=attn (the L2 competitor / the bandwidth ceiling).
+defaults:
+  - /experiment/sqoop/sync/_family
+  - override /model: sqoop/gated
+  - _self_
+model:
+  gate: attn
