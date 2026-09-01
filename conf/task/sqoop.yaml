@@ -15,7 +15,7 @@ train:
   early_stop_patience: 10
   early_stop_min_delta: 0.0
 
-  loader_mode: gpu_cached
+  loader_mode: dataloader
   mixed_precision: 'no'
   compile_model: true
   grad_accum: 1

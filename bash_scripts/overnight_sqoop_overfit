@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 # Run the whole overfit sweep on THIS machine's one GPU, one spec after
-# another. Invoke on box A:   bash bash_scripts/overnight_sqoop_overfit
-# (box B runs overnight_soc_singles). A CRASH prints FAIL; the LOSS each
-# run reaches is the morning read -- floors (silent, open, t_bus=1) are
-# included deliberately and are NOT expected to hit zero.
-# Logs: bash_scripts/logs/sqoop_overfit/.   SKIP_PREP=1 keeps existing data.
-set -u
+# another, streaming every run's log to the terminal (and to
+# bash_scripts/logs/sqoop_overfit/). Invoke on box A:
+#     bash bash_scripts/overnight_sqoop_overfit
+# No dataset step: a missing dataset is generated on demand by the first
+# run that needs it (you will see the generator's progress stream by).
+# STALE pre-v16 caches are NOT refreshed by that -- wipe once per box:
+#     rm -rf data/sqoop-* data/sort_of_clevr-*
+# A CRASH prints FAIL; the LOSS each run reaches is the morning read --
+# floors (silent, open, t_bus=1) are NOT expected to hit zero.
+set -uo pipefail
 cd "$(dirname "$0")/.."
 LOG=bash_scripts/logs/sqoop_overfit
 mkdir -p "$LOG"
-
-if [ "${SKIP_PREP:-0}" != 1 ]; then
-  rm -rf data/sqoop-* data/sort_of_clevr-*
-  bash_scripts/prepare_datasets_parallel || exit 1
-fi
 
 STEPS=${STEPS:-1500}
 MODELS=(
@@ -107,8 +106,8 @@ MODELS=(
 FAILED=0
 for spec in "${MODELS[@]}"; do
   name=$(echo "$spec" | sed 's|model=sqoop/||' | tr ' =./' '_')
-  if python -m scripts.debug task=sqoop train.n_steps=$STEPS \
-       train.compile_model=false $spec > "$LOG/$name.log" 2>&1
+  if python -u -m scripts.debug task=sqoop train.n_steps=$STEPS \
+       train.compile_model=false $spec 2>&1 | tee "$LOG/$name.log"
   then echo "ok   $name"
   else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
   fi

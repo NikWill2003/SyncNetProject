@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # Build every dataset the campaign needs, at most JOBS at a time (default
-# 3): Sort-of-CLEVR once, SQOOP once per rhs variety (18 = certification
-# default, 1/2/4/8 = the generalisation sweep, 35 = the near-exhaustive
-# control). Idempotent. Each sqoop build peaks around ~14 GB RAM while its
-# train split is in memory, so lower JOBS (JOBS=2 ...) on smaller boxes.
+# 3): Sort-of-CLEVR once, SQOOP once per rhs variety. Each sqoop build
+# peaks around ~14 GB RAM, so lower JOBS (JOBS=2 ...) on smaller boxes.
 # Per-job logs in bash_scripts/logs/. Edit the rhs list to trim the sweep.
 set -u
 cd "$(dirname "$0")/.."
@@ -19,13 +17,10 @@ prep() {  # prep <name> <hydra overrides...>
   fi
 }
 
-throttle() {  # block until fewer than JOBS jobs are running
-  while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n; done
-}
-
-throttle; prep sort_of_clevr task=sort_of_clevr &
+prep sort_of_clevr task=sort_of_clevr &
 for rhs in 1 2 4 8 18 35; do
-  throttle; prep "sqoop_rhs$rhs" task=sqoop dataset.rhs_variety="$rhs" &
+  while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n; done
+  prep "sqoop_rhs$rhs" task=sqoop dataset.rhs_variety="$rhs" &
 done
 wait
 [ ! -e bash_scripts/logs/.failed ]

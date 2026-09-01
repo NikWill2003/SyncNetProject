@@ -1,0 +1,483 @@
+[2026-09-01 02:25:13,583][HYDRA] Launching 1 jobs locally
+[2026-09-01 02:25:13,583][HYDRA] 	#0 : task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=0
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/nik/.netrc.
+wandb: Currently logged in as: nikiwillems9 (niks_priv) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.27.2
+wandb: Run data is saved locally in /home/nik/workspace/ImperialWork/msc_project/SyncNetProject/outputs/sort_of_clevr/multirun/2026-09-01_02-25-13/0/wandb/run-20260901_022516-2ila15ix
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run sort_of_clevr/busnet::multirun::2026-09-01_02-25-13::0
+wandb: ⭐️ View project at https://wandb.ai/niks_priv/sort_of_clevr
+wandb: 🚀 View run at https://wandb.ai/niks_priv/sort_of_clevr/runs/2ila15ix
+[2026-09-01 02:25:17,510][__main__][INFO] - [RANK 0] Starting training
+[2026-09-01 02:25:17,510][__main__][INFO] - [RANK 0] Model: BusNet
+[2026-09-01 02:25:17,510][__main__][INFO] - [RANK 0] Parameters: total=347906
+[2026-09-01 02:25:17,512][__main__][INFO] - [RANK 0] Config:
+train:
+  seed: 0
+  n_steps: 100000
+  train_bs: 256
+  val_bs: 1024
+  early_stop_metric: loss
+  early_stop_big_is_better: false
+  early_stop_patience: 1000000
+  early_stop_min_delta: 0.0
+  mixed_precision: bf16
+  compile_model: true
+  grad_accum: 1
+  grad_clip: 1.0
+  loader_mode: gpu_cached
+  num_workers: 0
+logging:
+  eval_log_interval: 500
+  train_log_interval: 500
+  info_metrics:
+  - loss
+  - accuracy
+  save_best: true
+wandb:
+  enabled: true
+  project_name: sort_of_clevr
+  entity: niks_priv
+  tags:
+  - v16
+  run_name: null
+optim:
+  optimiser: adamw
+  lr: 0.0003
+  weight_decay: 0.01
+  lr_scheduler: warmup_cosine
+  lr_scheduler_params:
+    warmup_steps: 2000
+dataset:
+  name: sort_of_clevr
+  root: ./data
+  dir: sort_of_clevr-seed1-train36000-test1000-q10-t-1
+  seed: 1
+  train_size: 36000
+  test_size: 1000
+  nb_questions: 10
+  t_subtype: -1
+model:
+  name: busnet
+  n_modules: 6
+  module_dim: 96
+  msg_dim: 4
+  phase_dim: 6
+  t_bus: 8
+  dt: 0.5
+  medium: bus
+  gate: attn
+  addresses: computed
+  q_onehot_vocab: null
+callbacks:
+- name: accuracy
+- name: interventions
+
+[2026-09-01 02:25:17,512][__main__][INFO] - [RANK 0] Full model:
+BusNet(
+  (field_enc): FieldEncoder(
+    (net): Sequential(
+      (0): Conv2d(3, 48, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+      (1): GroupNorm(8, 48, eps=1e-05, affine=True, bias=True)
+      (2): SiLU()
+      (3): Conv2d(48, 48, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+      (4): GroupNorm(8, 48, eps=1e-05, affine=True, bias=True)
+      (5): SiLU()
+      (6): Conv2d(48, 48, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (7): GroupNorm(8, 48, eps=1e-05, affine=True, bias=True)
+      (8): SiLU()
+      (9): Conv2d(48, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    )
+  )
+  (field): OscillatorField(
+    (z_head): Conv2d(64, 64, kernel_size=(1, 1), stride=(1, 1))
+    (stim): Conv2d(64, 64, kernel_size=(1, 1), stride=(1, 1))
+    (J): Conv2d(64, 64, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2), bias=False)
+  )
+  (binder): CompetitiveClaim(
+    (to_slot): Sequential(
+      (0): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)
+      (1): Linear(in_features=64, out_features=64, bias=True)
+    )
+  )
+  (anchor_to_phase): Linear(in_features=64, out_features=6, bias=True)
+  (pathways): QuestionPathways(
+    (grid_film_gamma): Linear(in_features=18, out_features=64, bias=True)
+    (grid_film_beta): Linear(in_features=18, out_features=64, bias=True)
+    (grid_norm): GroupNorm(8, 64, eps=1e-05, affine=True, bias=True)
+    (film_gamma): Linear(in_features=18, out_features=64, bias=True)
+    (film_beta): Linear(in_features=18, out_features=64, bias=True)
+    (norm): LayerNorm((64,), eps=1e-05, elementwise_affine=True, bias=True)
+    (h_init): Sequential(
+      (0): Linear(in_features=18, out_features=64, bias=True)
+      (1): GELU(approximate='none')
+      (2): Linear(in_features=64, out_features=576, bias=True)
+    )
+    (head_init): Sequential(
+      (0): Linear(in_features=18, out_features=64, bias=True)
+      (1): GELU(approximate='none')
+      (2): Linear(in_features=64, out_features=96, bias=True)
+    )
+  )
+  (medium): SharedBus(
+    (msg_proj): Linear(in_features=96, out_features=4, bias=True)
+  )
+  (identity): Exchangeable(
+    (cell): GRUCell(88, 96)
+  )
+  (dynamics): KuramotoStep(
+    (k_mlp): Sequential(
+      (0): Linear(in_features=192, out_features=64, bias=True)
+      (1): GELU(approximate='none')
+      (2): Linear(in_features=64, out_features=1, bias=True)
+      (3): Tanh()
+    )
+    (stim): Linear(in_features=96, out_features=6, bias=True)
+    (gen): SkewGenerator()
+  )
+  (readout): HeadReadout(
+    (head_out): Sequential(
+      (0): Linear(in_features=114, out_features=128, bias=True)
+      (1): GELU(approximate='none')
+      (2): Linear(in_features=128, out_features=10, bias=True)
+    )
+    (prior_head): Sequential(
+      (0): Linear(in_features=18, out_features=128, bias=True)
+      (1): GELU(approximate='none')
+      (2): Linear(in_features=128, out_features=10, bias=True)
+    )
+  )
+)
+[2026-09-01 02:26:10,969][__main__][INFO] - [RANK 0] [ Train | Step: 500    |  loss : 1.7375 | accuracy : 0.3321 | opt_sps : 9.3536  ]
+wandb: updating run metadata
+wandb: uploading config.yaml; uploading output.log; uploading wandb-summary.json
+wandb: uploading output.log; uploading wandb-summary.json
+wandb: 
+wandb: Run history:
+wandb:                  train_callbacks/accuracy ▁
+wandb:           train_callbacks/binary_accuracy ▁
+wandb:    train_callbacks/closest_shape_accuracy ▁
+wandb:     train_callbacks/count_in_box_accuracy ▁
+wandb:     train_callbacks/count_obtuse_accuracy ▁
+wandb: train_callbacks/count_same_shape_accuracy ▁
+wandb:   train_callbacks/furthest_shape_accuracy ▁
+wandb:   train_callbacks/left_of_centre_accuracy ▁
+wandb:   train_callbacks/non_relational_accuracy ▁
+wandb:          train_callbacks/on_band_accuracy ▁
+wandb:                                        +7 ...
+wandb: 
+wandb: Run summary:
+wandb:                  train_callbacks/accuracy 0.33213
+wandb:           train_callbacks/binary_accuracy 0.32943
+wandb:    train_callbacks/closest_shape_accuracy 0.3931
+wandb:     train_callbacks/count_in_box_accuracy 0.3123
+wandb:     train_callbacks/count_obtuse_accuracy 0.19261
+wandb: train_callbacks/count_same_shape_accuracy 0.17403
+wandb:   train_callbacks/furthest_shape_accuracy 0.42282
+wandb:   train_callbacks/left_of_centre_accuracy 0.33977
+wandb:   train_callbacks/non_relational_accuracy 0.3692
+wandb:          train_callbacks/on_band_accuracy 0.38852
+wandb:                                        +7 ...
+wandb: 
+wandb: 🚀 View run sort_of_clevr/busnet::multirun::2026-09-01_02-25-13::0 at: https://wandb.ai/niks_priv/sort_of_clevr/runs/2ila15ix
+wandb: ⭐️ View project at: https://wandb.ai/niks_priv/sort_of_clevr
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./outputs/sort_of_clevr/multirun/2026-09-01_02-25-13/0/wandb/run-20260901_022516-2ila15ix/logs
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/nik/workspace/ImperialWork/msc_project/SyncNetProject/scripts/main.py", line 94, in <module>
+    main()
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/main.py", line 94, in decorated_main
+    _run_hydra(
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 394, in _run_hydra
+    _run_app(
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 465, in _run_app
+    run_and_report(
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 220, in run_and_report
+    return func()
+           ^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 466, in <lambda>
+    lambda: hydra.multirun(
+            ^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/hydra.py", line 162, in multirun
+    ret = sweeper.sweep(arguments=task_overrides)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/core_plugins/basic_sweeper.py", line 177, in sweep
+    results = self.launcher.launch(batch, initial_job_idx=initial_job_idx)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/_internal/core_plugins/basic_launcher.py", line 74, in launch
+    ret = run_job(
+          ^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/hydra/core/utils.py", line 186, in run_job
+    ret.return_value = task_function(task_cfg)
+                       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/workspace/ImperialWork/msc_project/SyncNetProject/scripts/main.py", line 85, in main
+    final_metrics = trainer.train()
+                    ^^^^^^^^^^^^^^^
+  File "/home/nik/workspace/ImperialWork/msc_project/SyncNetProject/src/training/trainer.py", line 336, in train
+    self.on_eval_hit()
+  File "/home/nik/workspace/ImperialWork/msc_project/SyncNetProject/src/training/trainer.py", line 279, in on_eval_hit
+    eval_metrics = self.evaluate(
+                   ^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/workspace/ImperialWork/msc_project/SyncNetProject/src/training/trainer.py", line 210, in evaluate
+    out: dict = self.model(batch)
+                ^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 1047, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/accelerate/utils/operations.py", line 823, in forward
+    return model_forward(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/accelerate/utils/operations.py", line 811, in __call__
+    return convert_to_fp32(self.model_forward(*args, **kwargs))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/amp/autocast_mode.py", line 44, in decorate_autocast
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 2474, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 2192, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 736, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 1961, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 1571, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 1630, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 1478, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/bytecode_transformation.py", line 1626, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 1450, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 343, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 911, in trace_frame
+    run_tracer()
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py", line 892, in run_tracer
+    tracer.run()
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1813, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1480, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1017, in wrapper
+    return inner_fn(self, inst)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4171, in CALL
+    self._call(inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4162, in _call
+    self.call_function(fn, args, kwargs)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1381, in call_function
+    self.push(fn.call_function(self, args, kwargs))  # type: ignore[arg-type]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 1669, in call_function
+    return super().call_function(tx, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 810, in call_function
+    return super().call_function(tx, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 489, in call_function
+    return tx.inline_user_function_return(self, [*self.self_args(), *args], kwargs)  # type: ignore[attr-defined]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1408, in inline_user_function_return
+    return InliningInstructionTranslator.inline_call(self, fn, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 5241, in inline_call
+    return tracer.inline_call_()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 5462, in inline_call_
+    self.run()
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1813, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1480, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1017, in wrapper
+    return inner_fn(self, inst)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4171, in CALL
+    self._call(inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4162, in _call
+    self.call_function(fn, args, kwargs)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1381, in call_function
+    self.push(fn.call_function(self, args, kwargs))  # type: ignore[arg-type]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/lazy.py", line 294, in realize_and_forward
+    return getattr(self.realize(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/nn_module.py", line 1152, in call_function
+    return variables.UserFunctionVariable(fn, source=source).call_function(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 810, in call_function
+    return super().call_function(tx, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 489, in call_function
+    return tx.inline_user_function_return(self, [*self.self_args(), *args], kwargs)  # type: ignore[attr-defined]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1408, in inline_user_function_return
+    return InliningInstructionTranslator.inline_call(self, fn, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 5241, in inline_call
+    return tracer.inline_call_()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 5462, in inline_call_
+    self.run()
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1813, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1480, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1017, in wrapper
+    return inner_fn(self, inst)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4171, in CALL
+    self._call(inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4162, in _call
+    self.call_function(fn, args, kwargs)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1381, in call_function
+    self.push(fn.call_function(self, args, kwargs))  # type: ignore[arg-type]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/lazy.py", line 294, in realize_and_forward
+    return getattr(self.realize(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/nn_module.py", line 1152, in call_function
+    return variables.UserFunctionVariable(fn, source=source).call_function(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 810, in call_function
+    return super().call_function(tx, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/functions.py", line 489, in call_function
+    return tx.inline_user_function_return(self, [*self.self_args(), *args], kwargs)  # type: ignore[attr-defined]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1408, in inline_user_function_return
+    return InliningInstructionTranslator.inline_call(self, fn, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 5241, in inline_call
+    return tracer.inline_call_()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 5462, in inline_call_
+    self.run()
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1813, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1480, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1017, in wrapper
+    return inner_fn(self, inst)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4171, in CALL
+    self._call(inst)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 4162, in _call
+    self.call_function(fn, args, kwargs)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py", line 1381, in call_function
+    self.push(fn.call_function(self, args, kwargs))  # type: ignore[arg-type]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/torch.py", line 2694, in call_function
+    tensor_variable = wrap_fx_proxy(
+                      ^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/builder.py", line 3090, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/builder.py", line 3165, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/variables/builder.py", line 3289, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/utils.py", line 3751, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/utils.py", line 3835, in _get_fake_value_impl
+    ret_val = wrap_fake_exception(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/utils.py", line 3228, in wrap_fake_exception
+    return fn()
+           ^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/utils.py", line 3836, in <lambda>
+    lambda: run_node(tx.output, node, args, kwargs, nnmodule)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/utils.py", line 4019, in run_node
+    return node.target(*args, **kwargs)  # type: ignore[operator]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_compile.py", line 54, in inner
+    return disable_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 1298, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/utils/_stats.py", line 29, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1465, in __torch_dispatch__
+    return self.dispatch(func, types, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 2242, in dispatch
+    return self._cached_dispatch_impl(func, types, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1613, in _cached_dispatch_impl
+    output = self._dispatch_impl(func, types, args, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 2821, in _dispatch_impl
+    decomposition_table[func](*args, **kwargs)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_prims_common/wrappers.py", line 315, in _fn
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_decomp/decompositions.py", line 91, in inner
+    r = f(*tree_map(increase_prec, args), **tree_map(increase_prec, kwargs))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_decomp/decompositions.py", line 1527, in addmm
+    out = alpha * torch.mm(mat1, mat2)
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_compile.py", line 54, in inner
+    return disable_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 1298, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/utils/_stats.py", line 29, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1465, in __torch_dispatch__
+    return self.dispatch(func, types, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 2242, in dispatch
+    return self._cached_dispatch_impl(func, types, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1557, in _cached_dispatch_impl
+    key = self._cache_key(state, func, args, kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1680, in _cache_key
+    self._prep_args_for_hash(key_values, args, state, id_hashed_objects)
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1798, in _prep_args_for_hash
+    metadata = extract_tensor_metadata(arg)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nik/miniforge3/envs/SortOfClevrEnv/lib/python3.11/site-packages/torch/_subclasses/fake_tensor.py", line 1172, in extract_tensor_metadata
+    t.is_conj(),
+    ^^^^^^^^^^^
+KeyboardInterrupt

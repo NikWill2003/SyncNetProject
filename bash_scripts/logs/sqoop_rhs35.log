@@ -1,0 +1,11 @@
+sqoop rhs=35: IID control -- no held-out pairs, test_unseen is a second draw over seen pairs
+sqoop rhs=35: 1260 train pairs (1,078,560 train ex at 856/pair, target 1,080,000), 0 unseen pairs (0 val_unseen / 0 test_unseen ex), 20160 val_seen ex; restrict_positive=False
+building train (1078560 examples)...
+  attempts/example: mean 8.17, max 173; positive rate 0.5000
+saved train.npz to data/sqoop-seed0-train1080000-test25600-rhs35
+building val_seen (20160 examples)...
+  attempts/example: mean 8.24, max 122; positive rate 0.5000
+saved val_seen.npz to data/sqoop-seed0-train1080000-test25600-rhs35
+building test_unseen (20160 examples)...
+  attempts/example: mean 8.33, max 144; positive rate 0.5000
+saved test_unseen.npz to data/sqoop-seed0-train1080000-test25600-rhs35

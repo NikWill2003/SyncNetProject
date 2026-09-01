@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 # Run single full protocol runs (seed 0) on THIS machine's one GPU, one
-# cell after another. Invoke on box B:  bash bash_scripts/overnight_soc_singles
-# (box A runs overnight_sqoop_overfit). ~3-4 h per cell: the four thesis
-# cells fill one night; swap in the ablation block for night two.
-# Logs: bash_scripts/logs/soc_singles/.   SKIP_PREP=1 keeps existing data.
-set -u
+# cell after another, streaming every run's log to the terminal (and to
+# bash_scripts/logs/soc_singles/). Invoke on box B:
+#     bash bash_scripts/overnight_soc_singles
+# No dataset step: a missing dataset is generated on demand by the first
+# run that needs it. STALE pre-v16 caches are NOT refreshed by that --
+# wipe once per box:  rm -rf data/sort_of_clevr-*
+# ~3-4 h per cell: the four thesis cells fill one night; swap in the
+# ablation block for night two.
+set -uo pipefail
 cd "$(dirname "$0")/.."
 LOG=bash_scripts/logs/soc_singles
 mkdir -p "$LOG"
-
-if [ "${SKIP_PREP:-0}" != 1 ]; then
-  rm -rf data/sqoop-* data/sort_of_clevr-*
-  bash_scripts/prepare_datasets_parallel || exit 1
-fi
 
 CELLS=(
   sync/thesis/canonical
@@ -29,8 +28,8 @@ CELLS=(
 FAILED=0
 for cell in "${CELLS[@]}"; do
   name=$(echo "$cell" | tr '/' '_')
-  if python -m scripts.main task=sort_of_clevr experiment=sort_of_clevr/$cell \
-       train.seed=0 > "$LOG/$name.log" 2>&1
+  if python -u -m scripts.main task=sort_of_clevr experiment=sort_of_clevr/$cell \
+       train.seed=0 2>&1 | tee "$LOG/$name.log"
   then echo "ok   $name"
   else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
   fi

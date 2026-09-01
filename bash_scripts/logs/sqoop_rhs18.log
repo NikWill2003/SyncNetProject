@@ -1,0 +1,13 @@
+sqoop rhs=18: 648 train pairs (1,078,272 train ex at 1664/pair, target 1,080,000), 612 unseen pairs (24480 val_unseen / 24480 test_unseen ex), 20736 val_seen ex; restrict_positive=False
+building train (1078272 examples)...
+  attempts/example: mean 8.20, max 191; positive rate 0.5000
+saved train.npz to data/sqoop-seed0-train1080000-test25600-rhs18
+building val_seen (20736 examples)...
+  attempts/example: mean 8.21, max 115; positive rate 0.5000
+saved val_seen.npz to data/sqoop-seed0-train1080000-test25600-rhs18
+building val_unseen (24480 examples)...
+  attempts/example: mean 8.11, max 141; positive rate 0.5000
+saved val_unseen.npz to data/sqoop-seed0-train1080000-test25600-rhs18
+building test_unseen (24480 examples)...
+  attempts/example: mean 8.05, max 129; positive rate 0.5000
+saved test_unseen.npz to data/sqoop-seed0-train1080000-test25600-rhs18
