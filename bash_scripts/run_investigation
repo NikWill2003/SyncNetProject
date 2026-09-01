@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# The whole investigation queue on ONE box, one run after another,
+# streaming to the terminal (and to bash_scripts/logs/investigation/).
+#     bash bash_scripts/run_investigation          (run inside tmux)
+#
+# Order = priority: the assembly-rate baseline first (10 canonical seeds --
+# the measurement everything else is judged against), then the identity
+# dissection, then the token geometry probes. If the night dies midway,
+# the most important data is already on disk. ~9-13 h total.
+#
+# Registered predictions, on record before the data:
+#   - identity_cells_only reproduces the collapse MORE than anchors_only
+#     (six private GRUs = 6x thinner gradient per cell)
+#   - tokens t_bus=16 lifts count_obtuse if it is a settling-depth limit;
+#     msg_dim=8 lifts it if it is a channel-width limit
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/investigation
+mkdir -p "$LOG"
+
+RUNS=(
+  # ==== assembly-rate baseline: canonical x 10 seeds ==================
+  "canonical_s0  experiment=sort_of_clevr/sync/thesis/canonical train.seed=0"
+  "canonical_s1  experiment=sort_of_clevr/sync/thesis/canonical train.seed=1"
+  "canonical_s2  experiment=sort_of_clevr/sync/thesis/canonical train.seed=2"
+  "canonical_s3  experiment=sort_of_clevr/sync/thesis/canonical train.seed=3"
+  "canonical_s4  experiment=sort_of_clevr/sync/thesis/canonical train.seed=4"
+  "canonical_s5  experiment=sort_of_clevr/sync/thesis/canonical train.seed=5"
+  "canonical_s6  experiment=sort_of_clevr/sync/thesis/canonical train.seed=6"
+  "canonical_s7  experiment=sort_of_clevr/sync/thesis/canonical train.seed=7"
+  "canonical_s8  experiment=sort_of_clevr/sync/thesis/canonical train.seed=8"
+  "canonical_s9  experiment=sort_of_clevr/sync/thesis/canonical train.seed=9"
+  # ==== identity dissection ===========================================
+  "identity_s1        experiment=sort_of_clevr/sync/thesis/identity train.seed=1"
+  "identity_s2        experiment=sort_of_clevr/sync/thesis/identity train.seed=2"
+  "id_cells_only_s0   experiment=sort_of_clevr/sync/ablations/identity_cells_only train.seed=0"
+  "id_anchors_only_s0 experiment=sort_of_clevr/sync/ablations/identity_anchors_only train.seed=0"
+  # ==== token geometry probes (scratch-tier, not thesis rows) =========
+  "tokens_tbus16_s0   experiment=sort_of_clevr/sync/thesis/tokens model.t_bus=16 train.seed=0"
+  "tokens_msg8_s0     experiment=sort_of_clevr/sync/thesis/tokens model.msg_dim=8 train.seed=0"
+  # ==== optional extras (uncomment when wanted) =======================
+  # "gated_T16_s0     experiment=sort_of_clevr/sync/thesis/gated model.t_steps=16 train.seed=0"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main task=sort_of_clevr "$@" \
+       2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

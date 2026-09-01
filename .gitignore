@@ -15,3 +15,5 @@ TODO.md
 /legacy/
 /figures/
 *.ipynb
+*/logs/
+*/verify/

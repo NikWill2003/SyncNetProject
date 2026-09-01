@@ -4,3 +4,4 @@
 # add it back the day the forward takes T at test time.
 - name: accuracy
 - name: interventions
+- name: sync_metrics
