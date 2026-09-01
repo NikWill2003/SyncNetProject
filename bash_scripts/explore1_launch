@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# One command for the whole EXPLORE-1 night on a single 8-GPU machine:
+#   1) builds ALL datasets in parallel (prepare_datasets_parallel:
+#      Sort-of-CLEVR + sqoop rhs {1,2,4,8,18,35}; PREP_JOBS controls
+#      concurrency -- each sqoop build peaks ~14 GB RAM, so 4 => ~56 GB;
+#      raise to 6-7 on a 256 GB box, or SKIP_PREP=1 if data exists)
+#   2) launches 8 shard workers, one per GPU, in the background
+#   3) waits and reports per-shard verdicts
+#     bash bash_scripts/explore1_launch          (inside tmux)
+# Per-run logs: bash_scripts/logs/explore1/ ; per-shard streams:
+# bash_scripts/logs/explore1/shard<g>.out
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/explore1
+mkdir -p "$LOG"
+
+if [ "${SKIP_PREP:-0}" != 1 ]; then
+  JOBS=${PREP_JOBS:-4} bash_scripts/prepare_datasets_parallel || exit 1
+fi
+
+PIDS=()
+for g in 0 1 2 3 4 5 6 7; do
+  SHARD=$g NSHARDS=8 GPU=$g bash bash_scripts/explore1 \
+    > "$LOG/shard$g.out" 2>&1 &
+  PIDS+=($!)
+done
+echo "[explore1] 8 shard workers launched; tail -f $LOG/shard0.out to watch"
+
+FAILED=0
+for g in "${!PIDS[@]}"; do
+  if wait "${PIDS[$g]}"; then echo "shard $g: ok"
+  else echo "shard $g: had failures (see $LOG/shard$g.out)"; FAILED=1
+  fi
+done
+exit $FAILED

@@ -78,9 +78,12 @@ CALLBACKS: dict[str, CallbackSpec] = {
 }
 
 
-# t_variance is dataset-agnostic but model-gated; see soc/callbacks.py.
+# t_variance and the v16 fixed-point signature are dataset-agnostic but
+# model-gated; see soc/callbacks.py. The signature matters most here: sqoop
+# is the task where the field's trivial fixed point lives.
 try:
     from ...analysis import ANALYSIS_CALLBACKS
     CALLBACKS['t_variance'] = ANALYSIS_CALLBACKS['t_variance']
+    CALLBACKS['sync_metrics'] = ANALYSIS_CALLBACKS['sync_metrics']
 except Exception:
     pass

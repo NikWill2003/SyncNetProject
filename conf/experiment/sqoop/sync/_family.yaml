@@ -1,6 +1,7 @@
 # @package _global_
-# The sync family on sqoop: protocol + accuracy. The intervention callback
-# is Sort-of-CLEVR-scoped (question families); sqoop interventions run
-# post-hoc via analysis/probes on saved best weights.
+# The sync family on sqoop: protocol + accuracy + the fixed-point
+# signature. The intervention callback is Sort-of-CLEVR-scoped; sqoop
+# interventions run post-hoc via analysis/probes on saved best weights.
 defaults:
   - /experiment/sqoop/_protocol
+  - override /callbacks: sqoop/sync_v16
