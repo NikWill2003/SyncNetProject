@@ -224,12 +224,13 @@ class Trainer:
         self.optimiser.zero_grad()
         t4 = sync_time()
 
-        metrics |= section({
-            'forward_ms': (t1 - t0) * 1000,
-            'backward_ms': (t2 - t1) * 1000,
-            'clip_ms': (t3 - t2) * 1000,
-            'optim_ms': (t4 - t3) * 1000,
-        }, 'timing')
+        if self.opt_step % 500 == 0:
+            print(
+                f'PROFILE | forward={(t1-t0)*1000:.3f} ms | '
+                f'backward={(t2-t1)*1000:.3f} ms | '
+                f'clip={(t3-t2)*1000:.3f} ms | '
+                f'optim={(t4-t3)*1000:.3f} ms'
+            )
 
         metrics |= section(out.get('metrics', {}), 'model')
         metrics |= section(loss_metrics, 'loss')
