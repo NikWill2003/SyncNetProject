@@ -351,7 +351,8 @@ def unwrap_offers(data:Any):
 def normalize_offer(raw:dict[str,Any]):
     cpu=str(raw.get("cpu_name") or "unknown");gpu=str(raw.get("gpu_name") or "?")
     tier,score,pct,matched=cpu_info(cpu)
-    return {"id":raw.get("id") or raw.get("ask_contract_id"),"gpu":gpu,"gpu_score":GPU_SCORE.get(gpu,0),"cpu":cpu,"cpu_match":matched,"tier":tier,"st_score":score,"st_pct":pct,"ghz":fnum(raw.get("cpu_ghz")),"vcpus":fnum(raw.get("cpu_cores_effective")),"price":fnum(raw.get("dph_total",raw.get("dph")),9999),"dph_base":fnum(raw.get("dph_base",raw.get("dph"))),"storage_cost":fnum(raw.get("storage_cost")),"min_bid":fnum(raw.get("min_bid")),"rel":fnum(raw.get("reliability")),"pcie":raw.get("pci_gen",raw.get("pcie_gen","?")),"pcie_bw":fnum(raw.get("pcie_bw")),"inet_down":fnum(raw.get("inet_down")),"disk":fnum(raw.get("disk_space")),"duration":fnum(raw.get("duration")),"loc":raw.get("geolocation",raw.get("location","?"))}
+    return {"id":raw.get("id") or raw.get("ask_contract_id"),"gpu":gpu,
+            "num_gpus":max(1,int(fnum(raw.get("num_gpus"),1))),"gpu_score":GPU_SCORE.get(gpu,0),"cpu":cpu,"cpu_match":matched,"tier":tier,"st_score":score,"st_pct":pct,"ghz":fnum(raw.get("cpu_ghz")),"vcpus":fnum(raw.get("cpu_cores_effective")),"price":fnum(raw.get("dph_total",raw.get("dph")),9999),"dph_base":fnum(raw.get("dph_base",raw.get("dph"))),"storage_cost":fnum(raw.get("storage_cost")),"min_bid":fnum(raw.get("min_bid")),"rel":fnum(raw.get("reliability")),"pcie":raw.get("pci_gen",raw.get("pcie_gen","?")),"pcie_bw":fnum(raw.get("pcie_bw")),"inet_down":fnum(raw.get("inet_down")),"disk":fnum(raw.get("disk_space")),"duration":fnum(raw.get("duration")),"loc":raw.get("geolocation",raw.get("location","?"))}
 
 def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min_disk=25,min_duration=1.0,allowed_tiers=None,limit=100,exact_gpus=1,min_gpus=1,max_gpus=None,min_cpus_per_gpu=None,max_price_per_gpu=None):
     gpus=gpus or ["RTX 4090","RTX 5090"];gpu_list=", ".join(json.dumps(g) for g in gpus)
@@ -398,21 +399,34 @@ def print_candidate(r,index=None,total=None):
     if index is not None and total is not None:print(f"Candidate {index}/{total}")
     print(f"  Offer:        {r['id']}");print(f"  Tier:         {r['tier']}")
     print(f"  Single-core:  {r['st_score']}  ({r['st_pct']:.1f}% of 9950X)" if r["st_score"] is not None else "  Single-core:  unranked")
-    print(f"  GPU:          {r['gpu']}");print(f"  CPU:          {r['cpu']}");print(f"  Effective:    {r['vcpus']:.0f} CPUs");print(f"  Price:        ${r['price']:.3f}/h on-demand (total incl. storage; GPU base ${r['dph_base']:.3f}/h)");print(f"  Reliability:  {r['rel']:.4f}");print(f"  PCIe:         Gen {r['pcie']} / {r['pcie_bw']:.1f} GB/s");print(f"  Download:     {r['inet_down']:.0f} Mb/s");print(f"  Max duration: {r['duration']:.1f} days");print(f"  Location:     {r['loc']}")
+    print(f"  GPUs:         {r['num_gpus']}x {r['gpu']}");print(f"  CPU:          {r['cpu']}");print(f"  Eff. CPUs/GPU:{r['vcpus_per_gpu']:.1f}  ({r['vcpus']:.0f} total)");print(f"  Price/GPU:    ${r['price_per_gpu']:.3f}/h  (${r['price']:.3f}/h total, on-demand incl. storage; GPU base ${r['dph_base']:.3f}/h)");print(f"  Reliability:  {r['rel']:.4f}");print(f"  PCIe:         Gen {r['pcie']} / {r['pcie_bw']:.1f} GB/s");print(f"  Download:     {r['inet_down']:.0f} Mb/s");print(f"  Max duration: {r['duration']:.1f} days");print(f"  Location:     {r['loc']}")
 
 def print_table(rows):
     if not rows:print("No matching offers.");return
-    headers=["#","tier","ST%","offer","gpu","cpu","effCPU","$/h","rel","PCIe","loc"]
+    headers=["#","tier","ST%","offer","N","gpu","cpu","CPU/G","$/G/h","$tot/h","rel","PCIe","loc"]
     out=[]
-    for i,r in enumerate(rows,1):out.append([str(i),r["tier"],f'{r["st_pct"]:.1f}' if r["st_pct"] is not None else "?",str(r["id"]),r["gpu"],r["cpu"],f'{r["vcpus"]:.0f}',f'{r["price"]:.3f}',f'{r["rel"]:.4f}',str(r["pcie"]),str(r["loc"])])
+    for i,r in enumerate(rows,1):out.append([str(i),r["tier"],f'{r["st_pct"]:.1f}' if r["st_pct"] is not None else "?",str(r["id"]),str(r["num_gpus"]),r["gpu"],r["cpu"],f'{r["vcpus_per_gpu"]:.1f}',f'{r["price_per_gpu"]:.3f}',f'{r["price"]:.3f}',f'{r["rel"]:.4f}',str(r["pcie"]),str(r["loc"])])
     widths=[max(len(headers[i]),*(len(row[i]) for row in out)) for i in range(len(headers))]
-    print("A >=95%; B 90-95%; C 85-90%; D 80-85%; E 70-80% of Ryzen 9 9950X PassMark single-thread\n")
+    print("A >=95%; B 90-95%; C 85-90%; D 80-85%; E 70-80% of Ryzen 9 9950X PassMark single-thread")
+    print("Per-GPU columns assume ONE independent experiment per GPU. ST%, reliability, VRAM and PCIe are NOT divided.\n")
     print("  ".join(headers[i].ljust(widths[i]) for i in range(len(headers))));print("  ".join("-"*w for w in widths))
     for row in out:print("  ".join(row[i].ljust(widths[i]) for i in range(len(headers))))
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument("--gpu",action="append",default=[]);ap.add_argument("--max-price",type=float);ap.add_argument("--min-reliability",type=float,default=0.99);ap.add_argument("--min-cpus",type=float,default=8);ap.add_argument("--min-disk",type=float,default=25);ap.add_argument("--min-duration",type=float,default=1.0);ap.add_argument("--tiers",default="A,B,C,D,E,?");ap.add_argument("--limit",type=int,default=100);ap.add_argument("--top",type=int,default=30);args=ap.parse_args()
+    ap=argparse.ArgumentParser();ap.add_argument("--gpu",action="append",default=[]);ap.add_argument("--max-price",type=float);ap.add_argument("--min-reliability",type=float,default=0.99);ap.add_argument("--min-cpus",type=float,default=8);ap.add_argument("--min-disk",type=float,default=25);ap.add_argument("--min-duration",type=float,default=1.0);ap.add_argument("--tiers",default="A,B,C,D,E,?");ap.add_argument("--limit",type=int,default=100);ap.add_argument("--top",type=int,default=30)
+    ap.add_argument("--gpus",type=int,help="Require EXACTLY this many GPUs per box (default 1).")
+    ap.add_argument("--min-gpus",type=int,default=1);ap.add_argument("--max-gpus",type=int)
+    ap.add_argument("--min-cpus-per-gpu",type=float,default=8.0,help="CPU QUANTITY floor per GPU; tiers cover CPU QUALITY.")
+    ap.add_argument("--max-price-per-gpu",type=float)
+    ap.add_argument("--any-gpus",action="store_true",help="Show 1..N GPU boxes together instead of exactly one count.")
+    args=ap.parse_args()
     if shutil.which("vastai") is None:raise SystemExit("vastai CLI not found")
     tiers={x.strip().upper() for x in args.tiers.split(",") if x.strip()}
-    print_table(search_offers(gpus=args.gpu or None,max_price=args.max_price,min_reliability=args.min_reliability,min_cpus=args.min_cpus,min_disk=args.min_disk,min_duration=args.min_duration,allowed_tiers=tiers,limit=args.limit)[:args.top])
+    exact=None if args.any_gpus else (args.gpus if args.gpus is not None else 1)
+    print_table(search_offers(gpus=args.gpu or None,max_price=args.max_price,min_reliability=args.min_reliability,
+                              min_cpus=0 if exact is None else args.min_cpus,min_disk=args.min_disk,
+                              min_duration=args.min_duration,allowed_tiers=tiers,limit=args.limit,
+                              exact_gpus=exact,min_gpus=args.min_gpus,max_gpus=args.max_gpus,
+                              min_cpus_per_gpu=args.min_cpus_per_gpu,
+                              max_price_per_gpu=args.max_price_per_gpu)[:args.top])
 if __name__=="__main__":main()

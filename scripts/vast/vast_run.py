@@ -70,7 +70,36 @@ def load_dotenv(path: Path) -> None:
         value = value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
             value = value[1:-1]
+        existing = os.environ.get(key)
+        if existing is not None and existing != value:
+            print(f"WARNING: {key} is already set in your shell and differs from "
+                  f".env; the SHELL value wins (os.environ.setdefault). "
+                  f"`unset {key}` if .env is the one you want.")
         os.environ.setdefault(key, value)
+
+
+def preflight_repo(repo: str, branch: str, token: str) -> None:
+    """Prove the token can read this repo/branch BEFORE renting anything.
+    A bad or expired token otherwise surfaces as `git clone` HTTP 401 on the
+    instance, minutes and cents later."""
+    if not repo.startswith("https://"):
+        return
+    authed = repo.replace("https://", f"https://x-access-token:{token}@", 1)
+    p = subprocess.run(["git", "ls-remote", "--heads", authed, branch],
+                       text=True, capture_output=True,
+                       env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    if p.returncode != 0:
+        err = (p.stderr or p.stdout).strip().replace(token, "<token>")
+        raise SystemExit(
+            f"Repo preflight FAILED for {repo} (branch {branch}):\n  {err}\n"
+            "  401 => token expired/revoked, or a fine-grained PAT without "
+            "'Contents: Read' on this repo, or a stale GITHUB_TOKEN exported "
+            "in your shell overriding .env.")
+    if not p.stdout.strip():
+        raise SystemExit(
+            f"Repo preflight FAILED: branch {branch!r} does not exist on {repo}. "
+            "Push it, or set VAST_REPO_BRANCH in .env.")
+    print(f"preflight ok: {repo} branch {branch} readable")
 
 
 def require_env(name: str) -> str:
@@ -379,11 +408,13 @@ def controller(state_path: Path) -> int:
     ensure_monitor_windows(session, user, host, port)
 
     next_line = 1
+    poll_errors = 0
     result: str | None = None
     cancelled = False
     while result is None:
         try:
             lines = status_lines(user, host, port, next_line)
+            poll_errors = 0
             for line in lines:
                 print(f"[remote] {line}", flush=True)
             next_line += len(lines)
@@ -430,6 +461,27 @@ def controller(state_path: Path) -> int:
                         result = "FAILED"
                     break
                 print("Enter c, q, or s.")
+        except Exception as e:
+            # Transient SSH/network errors are normal; a vanished instance is
+            # not. After a few consecutive failures, ask Vast whether the box
+            # still exists -- otherwise the controller polls a dead host and
+            # "tracks" a run that can never finish.
+            poll_errors += 1
+            log("POLL_ERROR", f"{e} ({poll_errors})")
+            if poll_errors >= 3:
+                alive = instance_alive(instance_id)
+                if alive is False:
+                    log("VANISHED", f"instance {instance_id} no longer exists on Vast "
+                                    "(destroyed externally, expired, or host offline)")
+                    if not load_state(state_path).get("history_logged"):
+                        append_history(root, "vanished", run_script, offer,
+                                       instance_id, time.time() - started)
+                    state_path.unlink(missing_ok=True)
+                    log("CLEANED", "active state removed; nothing left to sync")
+                    delayed_kill_session(session)
+                    return 1
+                log("ALIVE", f"instance {instance_id} still listed; retrying")
+            time.sleep(poll)
 
     final_lines = status_lines(user, host, port, next_line)
     for line in final_lines:
@@ -459,12 +511,13 @@ def controller(state_path: Path) -> int:
         return 0 if result == "SUCCESS" else 1
 
     log("DESTROYING", str(instance_id))
-    try:
-        run(["vastai", "destroy", "instance", str(instance_id)])
-    except Exception as e:
-        log("DESTROY_ERR", str(e))
+    if not destroy_verified(instance_id):
+        log("DESTROY_ERR", f"instance {instance_id} is STILL LISTED after retries "
+                           f"-- it may still be billing. Destroy it in the web UI "
+                           f"or: vastai destroy instance {instance_id}")
         log("KEEPING", "active state retained so --resume-all can retry cleanup")
         return 1
+    log("DESTROYED", f"instance {instance_id} confirmed gone")
 
     state_path.unlink(missing_ok=True)
     log("DONE", f"{history_status} | {duration_text(runtime)}")
@@ -497,9 +550,24 @@ esac
 ASKPASS_EOF
   chmod 700 "$ASKPASS"
 
+  # Vast does not always expose -e vars to the onstart shell; /etc/environment
+  # is where they land. Source it before using GITHUB_TOKEN.
+  if [ -z "${GITHUB_TOKEN:-}" ] && [ -f /etc/environment ]; then
+    set -a; . /etc/environment; set +a
+    status "ENV sourced /etc/environment"
+  fi
+  # Log enough to diagnose a clone failure without ever printing the token.
+  status "REPO url=${REPO_URL:-UNSET} branch=${REPO_BRANCH:-UNSET} token_chars=${#GITHUB_TOKEN}"
+  if [ -z "${GITHUB_TOKEN:-}" ]; then
+    status "FAILED GITHUB_TOKEN is empty in the onstart environment"
+  fi
+
   status "CLONING $REPO_BRANCH"
-  GIT_ASKPASS="$ASKPASS" GIT_TERMINAL_PROMPT=0 \\
-    git clone --branch "$REPO_BRANCH" "$REPO_URL" "$WORKDIR"
+  if ! GIT_ASKPASS="$ASKPASS" GIT_TERMINAL_PROMPT=0 \\
+      git clone --branch "$REPO_BRANCH" "$REPO_URL" "$WORKDIR" 2>/tmp/clone.err; then
+    status "FAILED clone: $(tr -d '\\r' </tmp/clone.err | tail -n 2 | tr '\\n' ' ')"
+    exit 128
+  fi
   rm -f "$ASKPASS"
 
   status "STARTING worker"
@@ -574,6 +642,49 @@ def ensure_tracking_session(state_path: Path) -> str:
     return "restarted-controller"
 
 
+def cleanup_dead_state(root: Path, path: Path, state: dict) -> None:
+    """Drop local tracking for an instance that no longer exists on Vast:
+    kill the tmux session, log one history line, remove the active state."""
+    iid = int(state["instance_id"])
+    session = state.get("session")
+    if session:
+        subprocess.run(["tmux", "kill-session", "-t", session], capture_output=True)
+    if not state.get("history_logged"):
+        append_history(root, "vanished", state.get("run_script", "?"),
+                       state.get("offer", {}), iid,
+                       time.time() - float(state.get("started", time.time())))
+    path.unlink(missing_ok=True)
+    print(f"Instance {iid} no longer exists on Vast; removed tracking state"
+          + (f" and session {session}." if session else "."))
+
+
+def instance_alive(instance_id: int) -> bool | None:
+    """True/False if we could ask Vast; None if the query itself failed
+    (network blip -- callers must not treat that as 'gone')."""
+    ids = active_instance_ids()
+    if ids is None:
+        return None
+    return instance_id in ids
+
+
+def destroy_verified(instance_id: int, attempts: int = 3) -> bool:
+    """Destroy and CONFIRM it is gone. `vastai destroy` can return success
+    while the instance lingers, which is how a box keeps billing after the
+    controller thinks it is finished."""
+    for attempt in range(1, attempts + 1):
+        run(["vastai", "destroy", "instance", str(instance_id)], check=False)
+        time.sleep(4)
+        alive = instance_alive(instance_id)
+        if alive is False:
+            return True
+        if alive is None:
+            log("DESTROY_CHECK", "could not query Vast; retrying")
+        else:
+            log("DESTROY_RETRY", f"instance {instance_id} still listed (attempt {attempt})")
+        time.sleep(4)
+    return instance_alive(instance_id) is False
+
+
 def active_instance_ids() -> set[int] | None:
     p = run(["vastai", "show", "instances", "--raw"], check=False)
     if p.returncode != 0:
@@ -616,8 +727,8 @@ def resume_all(root: Path) -> None:
             print(f"Skipping unreadable state {path}: {e}")
             continue
         if active_ids is not None and iid not in active_ids:
-            print(f"Stale: {script} -> instance {iid} is no longer active; removing state.")
-            path.unlink(missing_ok=True)
+            print(f"Stale: {script} -> instance {iid} is no longer active.")
+            cleanup_dead_state(root, path, state)
             stale += 1
             continue
         result = ensure_tracking_session(path)
@@ -699,6 +810,12 @@ def main() -> None:
         return
     if args.resume:
         path = resolve_resume_path(root, args.resume)
+        state = load_state(path)
+        # A tmux session existing does not mean the run does. Check Vast first,
+        # or --resume happily reports "already-tracking" for a destroyed box.
+        if instance_alive(int(state["instance_id"])) is False:
+            cleanup_dead_state(root, path, state)
+            return
         result = ensure_tracking_session(path)
         state = load_state(path)
         print(f"{result}: {state['run_script']} -> {state['session']} (instance {state['instance_id']})")
@@ -736,6 +853,7 @@ def main() -> None:
             raise SystemExit("Cancelled.")
 
     git_preflight(root, branch)
+    preflight_repo(repo, branch, github)
     auto_mode = args.offer.lower() == "auto"
     while True:
         if auto_mode:

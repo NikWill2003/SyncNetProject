@@ -1,3 +1,7 @@
+# torch is deliberately absent: use the rental image's torch (it is matched
+# to the CUDA driver; a pip torch here risks breaking that). Run
+# verify/verify_reference.py after install -- exact 0.0 means the image's
+# torch matches the golden fixtures; a ~1e-6 diff means recut them once.
 accelerate
 hydra-core
 omegaconf

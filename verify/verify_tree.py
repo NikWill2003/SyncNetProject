@@ -73,10 +73,6 @@ NEW = [
     'conf/experiment/sort_of_clevr/baselines/thesis/relnet.yaml',
     'conf/experiment/sqoop/baselines/thesis/film.yaml',
     'conf/callbacks/sort_of_clevr/sync_v16.yaml',
-    'bash_scripts/prepare_datasets_parallel',
-    'bash_scripts/apply_over_v15',
-    'bash_scripts/overnight_sqoop_overfit',
-    'bash_scripts/overnight_soc_singles',
 ]
 
 TOUCH = {  # path -> marker of the specific change
