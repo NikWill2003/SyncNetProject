@@ -29,7 +29,24 @@ exec >>"$BOOTSTRAP_LOG" 2>&1
 status "WORKER_START $RUN_SCRIPT"
 cd "$WORKDIR"
 
+# Some images ship python3 only. Every campaign calls `python`, so make one
+# available on PATH rather than patching each script (exit 127 otherwise).
+if ! command -v python >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1; then
+    mkdir -p /workspace/bin
+    ln -sf "$(command -v python3)" /workspace/bin/python
+    export PATH="/workspace/bin:$PATH"
+    status "SHIM python -> $(command -v python3)"
+  else
+    status "FAILED no python or python3 on PATH"
+    touch /workspace/RUN_FAILED
+    exit 127
+  fi
+fi
+status "PYTHON $(python -V 2>&1) at $(command -v python)"
+
 status "INSTALLING requirements.txt"
+python -m ensurepip --default-pip >/dev/null 2>&1 || true
 python -m pip install -q --upgrade pip
 python -m pip install -q -r requirements.txt
 
