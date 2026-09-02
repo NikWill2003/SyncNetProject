@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# BOX 04 -- DATASET: Sort-of-CLEVR   (every run in this script uses this
+# one dataset, so it is generated at most once on the box)
+# Rate baselines: identity to n~13 draws, canonical to n~28.
+#     bash bash_scripts/box04_soc_identity_canonical_rate      (tmux; one GPU, sequential)
+# Runs of one cell across boxes share a cfg_hash in wandb -- group by it
+# to pool distributed draws.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box04_soc_identity_canonical_rate
+mkdir -p "$LOG"
+
+RUNS=(
+  "soc_identity_s5              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/identity train.seed=5 wandb.tags=[v16,explore2]"
+  "soc_identity_s6              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/identity train.seed=6 wandb.tags=[v16,explore2]"
+  "soc_identity_s7              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/identity train.seed=7 wandb.tags=[v16,explore2]"
+  "soc_identity_s8              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/identity train.seed=8 wandb.tags=[v16,explore2]"
+  "soc_identity_s9              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/identity train.seed=9 wandb.tags=[v16,explore2]"
+  "soc_canonical_s10            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=10 wandb.tags=[v16,explore2]"
+  "soc_canonical_s11            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=11 wandb.tags=[v16,explore2]"
+  "soc_canonical_s12            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=12 wandb.tags=[v16,explore2]"
+  "soc_canonical_s13            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=13 wandb.tags=[v16,explore2]"
+  "soc_canonical_s14            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=14 wandb.tags=[v16,explore2]"
+  "soc_canonical_s15            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=15 wandb.tags=[v16,explore2]"
+  "soc_canonical_s16            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=16 wandb.tags=[v16,explore2]"
+  "soc_canonical_s17            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=17 wandb.tags=[v16,explore2]"
+  "soc_canonical_s18            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=18 wandb.tags=[v16,explore2]"
+  "soc_canonical_s19            task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical train.seed=19 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

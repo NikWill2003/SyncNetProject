@@ -1,0 +1,11 @@
+# @package _global_
+# IdentityBusNet + spatial claim prior: a learned per-slot bias over
+# cells in the competition logits, so slots start hunting in their own region
+# rather than racing from symmetric noise. Competition still binds, phase still
+# carries it. Registered: assembly rate up, L1 interventions intact.
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  claim_prior: spatial

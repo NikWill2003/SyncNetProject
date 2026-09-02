@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_1_baselines
+# DATASET: SQOOP rhs=18  (the only dataset this script touches -- generated
+# once, on demand, by the first run that needs it)
+# 36 runs, ~27 GPU-h sequential on one GPU.
+# WHY: the .974-vs-.500 dissociation has no baseline reference points: all six x5 seeds, plus both ch=128 matched cells
+#     local  : bash bash_scripts/run_sqoop_rhs18_1_baselines
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_1_baselines
+# Runs of one cell share a cfg_hash in wandb -- group by it to pool draws
+# made on different boxes.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+# one dataset per campaign: built once, serially, before any GPU starts
+PREP="task=sqoop"
+
+RUNS=(
+  # ---- baselines x5 + ch=128 matches ----
+  "sq_base_conv_s0              task=sqoop experiment=sqoop/baselines/thesis/conv train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_conv_s1              task=sqoop experiment=sqoop/baselines/thesis/conv train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_conv_s2              task=sqoop experiment=sqoop/baselines/thesis/conv train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_conv_s3              task=sqoop experiment=sqoop/baselines/thesis/conv train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_conv_s4              task=sqoop experiment=sqoop/baselines/thesis/conv train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_film_s0              task=sqoop experiment=sqoop/baselines/thesis/film train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_film_s1              task=sqoop experiment=sqoop/baselines/thesis/film train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_film_s2              task=sqoop experiment=sqoop/baselines/thesis/film train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_film_s3              task=sqoop experiment=sqoop/baselines/thesis/film train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_film_s4              task=sqoop experiment=sqoop/baselines/thesis/film train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_relnet_s0            task=sqoop experiment=sqoop/baselines/thesis/relnet train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_relnet_s1            task=sqoop experiment=sqoop/baselines/thesis/relnet train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_relnet_s2            task=sqoop experiment=sqoop/baselines/thesis/relnet train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_relnet_s3            task=sqoop experiment=sqoop/baselines/thesis/relnet train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_relnet_s4            task=sqoop experiment=sqoop/baselines/thesis/relnet train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s0       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s1       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s2       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s3       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s4       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s0     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s1     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s2     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s3     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s4     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s0  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s1  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s2  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s3  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s4  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_sw_ch128_s0               task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_sw_ch128_s1               task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_sw_ch128_s2               task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_transf_ch128_s0           task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_transf_ch128_s1           task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_transf_ch128_s2           task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=2 wandb.tags=[v16,explore2]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

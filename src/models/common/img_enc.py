@@ -106,7 +106,25 @@ class SQOOPCNNEncoder(nn.Module):
         return self.cnn(x)
 
 
-ImageEncoder = PatchifyEncoder | SOCCNNEncoder | SQOOPCNNEncoder
+class FieldTrunkEncoder(nn.Module):
+    """The sync family's FieldEncoder exposed through the common encoder
+    interface (ch / spatial / n_tokens), so baselines can run on exactly
+    the perception stack the field models use. Lazy import avoids a
+    circular dependency."""
+
+    def __init__(self, img_size: int):
+        super().__init__()
+        from ..sync.field import FIELD_CH, FieldEncoder
+        self.trunk = FieldEncoder(img_size)
+        self.ch = FIELD_CH
+        self.spatial = self.trunk.spatial
+        self.n_tokens = self.spatial * self.spatial
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.trunk(x)
+
+
+ImageEncoder = PatchifyEncoder | SOCCNNEncoder | SQOOPCNNEncoder | FieldTrunkEncoder
 
 
 def build_image_encoder(enc_config: dict[str, Any], dataset: str) -> ImageEncoder:
@@ -118,6 +136,9 @@ def build_image_encoder(enc_config: dict[str, Any], dataset: str) -> ImageEncode
         img_size = SQOOPConst.IMG_SIZE
     else:
         raise ValueError(f'unrecognised dataset: {dataset!r}')
+
+    if name == 'field':
+        return FieldTrunkEncoder(img_size=img_size)
 
     if name == 'patchify':
         return PatchifyEncoder(

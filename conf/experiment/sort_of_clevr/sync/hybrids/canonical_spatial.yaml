@@ -1,0 +1,9 @@
+# @package _global_
+# The prior alone on the canonical model -- isolates how much of any
+# hybrid gain is the spatial prior rather than identity.
+defaults:
+  - /experiment/sort_of_clevr/sync/hybrids/_family
+  - override /model: sort_of_clevr/busnet
+  - _self_
+model:
+  claim_prior: spatial

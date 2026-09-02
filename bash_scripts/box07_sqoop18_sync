@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# BOX 07 -- DATASET: SQOOP rhs=18  |  18 runs, ~19 h
+# WHY: the token controls crashed on the stale clone and are the only way to tell "bus cannot" from "perception cannot"; PREREQ: rm -rf data/sqoop-* once
+#     bash bash_scripts/box07_sqoop18_sync      (tmux; one GPU, sequential)
+# Runs of one cell share a cfg_hash in wandb; group by it to pool draws
+# scattered across boxes.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box07_sqoop18_sync
+mkdir -p "$LOG"
+
+RUNS=(
+  "sq_tokens_stim_s0            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s1            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s2            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s3            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s4            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s0          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s1          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s2          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s3          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s4          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_gated_s3                  task=sqoop experiment=sqoop/sync/thesis/gated train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_gated_s4                  task=sqoop experiment=sqoop/sync/thesis/gated train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_gated_s5                  task=sqoop experiment=sqoop/sync/thesis/gated train.seed=5 wandb.tags=[v16,explore2]"
+  "sq_canonical_T16_s0          task=sqoop experiment=sqoop/sync/thesis/canonical model.t_bus=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_canonical_T16_s1          task=sqoop experiment=sqoop/sync/thesis/canonical model.t_bus=16 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_canonical_T16_s2          task=sqoop experiment=sqoop/sync/thesis/canonical model.t_bus=16 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_identity_s4               task=sqoop experiment=sqoop/sync/thesis/identity train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_identity_s5               task=sqoop experiment=sqoop/sync/thesis/identity train.seed=5 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

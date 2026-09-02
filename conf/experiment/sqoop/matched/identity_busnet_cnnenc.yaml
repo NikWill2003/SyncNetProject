@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /experiment/sqoop/matched/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  encoder:
+    name: cnn
+    ch: 64

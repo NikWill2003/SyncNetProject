@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# BOX 3 -- SoC ablation seeds (duplicates from the stalled sweep are
+# extra lottery draws, never wasted), tokens seeds + geometry probes
+# (count_obtuse: depth vs width), and the T-regime arms (registered:
+# canonical T16 assembly rate <= T8; gated gains). ~25 runs, ~14-18 h.
+#     bash bash_scripts/box3_soc_ablations_T          (inside tmux; single GPU, sequential)
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/$(basename "$0")
+mkdir -p "$LOG"
+
+RUNS=(
+  "soc_abl_medium_silent_s1   task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_silent_s2   task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_addresses_static_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/addresses_static train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_addresses_static_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/addresses_static train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_addresses_open_s1  task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/addresses_open train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_addresses_open_s2  task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/addresses_open train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_gated_attn_s1      task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/gated_attn train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_gated_attn_s2      task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/gated_attn train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_gated_full_s1      task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/gated_full train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_gated_full_s2      task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/gated_full train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_tokens_s1              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/tokens train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_tokens_s2              task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/tokens train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_tokens_T16_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/tokens model.t_bus=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_tokens_msg8_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/tokens model.msg_dim=8 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s0       task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s1       task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s2       task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_gated_T16_s0           task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated model.t_steps=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_gated_T16_s1           task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated model.t_steps=16 train.seed=1 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

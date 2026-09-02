@@ -21,9 +21,22 @@ class CompetitiveClaim(nn.Module):
 
     def __init__(self, feat_dim: int, slot_dim: int, n_slots: int,
                  n_groups: int, osc_dim: int, iters: int = 3,
-                 beta: float = 8.0, per_module_anchors: bool = False):
+                 beta: float = 8.0, per_module_anchors: bool = False,
+                 claim_prior: str | None = None, n_cells: int | None = None):
         super().__init__()
         self.n_slots, self.iters = n_slots, iters
+        # claim_prior='spatial': a learned per-slot bias over cells, added to
+        # the competition logits. Slots start hunting in their own region
+        # instead of racing from symmetric noise -- partition binding as a
+        # PRIOR while competition remains the mechanism. Zero-initialised, so
+        # step 0 is the unmodified claim; anneal to zero to end architecturally
+        # identical to the canonical binder.
+        self.claim_prior = claim_prior
+        if claim_prior == 'spatial':
+            if n_cells is None:
+                raise ValueError("claim_prior='spatial' needs n_cells")
+            self.cell_bias = nn.Parameter(torch.zeros(n_slots, n_cells))
+            self.register_buffer('prior_scale', torch.ones(()))
         a_m = n_slots if per_module_anchors else 1
         self.anchor_mu = nn.Parameter(torch.randn(1, a_m, n_groups, osc_dim))
         self.anchor_log_sigma = nn.Parameter(torch.zeros(1, a_m, n_groups, osc_dim))
@@ -50,6 +63,8 @@ class CompetitiveClaim(nn.Module):
         reads = slots = None
         for _ in range(self.iters):
             logits = self.log_beta.exp() * torch.einsum('bkgd,bngd->bkn', phi, Zt) / K_f
+            if self.claim_prior == 'spatial':
+                logits = logits + self.prior_scale * self.cell_bias.unsqueeze(0)
             attn = F.softmax(logits, dim=1)                                  # cells choose slots
             reads = attn / (attn.sum(-1, keepdim=True) + 1e-8)
             phi = F.normalize(torch.einsum('bkn,bngd->bkgd', reads, Zt), dim=-1)

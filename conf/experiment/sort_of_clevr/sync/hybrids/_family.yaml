@@ -1,0 +1,8 @@
+# @package _global_
+# Hybrid cells (scratch tier): the two targeted fixes for the assembly
+# lottery, aimed at keeping IdentityBusNet -- private modules and all --
+# as the model presented, but making it assemble reliably.
+defaults:
+  - /experiment/sort_of_clevr/sync/_family
+wandb:
+  tags: [v16, hybrid]

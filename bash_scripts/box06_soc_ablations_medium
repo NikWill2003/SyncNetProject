@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# BOX 06 -- DATASET: Sort-of-CLEVR   (every run in this script uses this
+# one dataset, so it is generated at most once on the box)
+# Medium ablations x5 seeds: the silent floor + three line gates.
+#     bash bash_scripts/box06_soc_ablations_medium      (tmux; one GPU, sequential)
+# Runs of one cell across boxes share a cfg_hash in wandb -- group by it
+# to pool distributed draws.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box06_soc_ablations_medium
+mkdir -p "$LOG"
+
+RUNS=(
+  "soc_abl_medium_silent_s0     task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_silent_s1     task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_silent_s2     task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_silent_s3     task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=3 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_silent_s4     task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_silent train.seed=4 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s0 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s3 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=3 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_attn_s4 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_attn train.seed=4 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s0 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s3 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=3 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_full_s4 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_full train.seed=4 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s0 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s1 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s2 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s3 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=3 wandb.tags=[v16,explore2]"
+  "soc_abl_medium_lines_phase_s4 task=sort_of_clevr experiment=sort_of_clevr/sync/ablations/medium_lines_phase train.seed=4 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

@@ -23,7 +23,8 @@ from .components import PhaseNative, anchor_shuffle
 @dataclass
 class IdentityBusNetConfig(BusNetConfig):
     name: str = 'identity_busnet'
-    private_cells: bool = True
+    # True | False | 'residual' (shared weights + zero-init per-slot deltas)
+    private_cells: Any = True
     per_module_anchors: bool = True
 
 

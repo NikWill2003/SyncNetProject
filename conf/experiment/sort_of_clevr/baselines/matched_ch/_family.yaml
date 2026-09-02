@@ -1,0 +1,9 @@
+# @package _global_
+# Channel-matched baselines (scratch tier): every encoder at ch=128 for
+# this dataset, so no baseline wins on encoder width. Only the two cells
+# that deviate from 128 need a matched variant; the rest are already
+# matched and run from baselines/thesis.
+defaults:
+  - /experiment/sort_of_clevr/_protocol
+wandb:
+  tags: [v16, matched_ch]

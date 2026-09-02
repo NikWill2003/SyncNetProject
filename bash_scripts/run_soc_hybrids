@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# run_soc_hybrids
+# DATASET: Sort-of-CLEVR
+# 24 runs.
+# WHY: the two targeted fixes for the assembly lottery, judged on RATE: hybrid x8, each factor alone x6, prior-on-canonical x4 to separate prior from identity
+#     local  : bash bash_scripts/run_soc_hybrids
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_soc_hybrids
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+# one dataset per campaign: built once, serially, before any GPU starts
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  "identity_hybrid_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=0"
+  "identity_hybrid_s1         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=1"
+  "identity_hybrid_s2         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=2"
+  "identity_hybrid_s3         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=3"
+  "identity_hybrid_s4         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=4"
+  "identity_hybrid_s5         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=5"
+  "identity_hybrid_s6         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=6"
+  "identity_hybrid_s7         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=7"
+  "identity_residual_s0       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_residual train.seed=0"
+  "identity_residual_s1       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_residual train.seed=1"
+  "identity_residual_s2       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_residual train.seed=2"
+  "identity_residual_s3       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_residual train.seed=3"
+  "identity_residual_s4       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_residual train.seed=4"
+  "identity_residual_s5       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_residual train.seed=5"
+  "identity_spatial_s0        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial train.seed=0"
+  "identity_spatial_s1        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial train.seed=1"
+  "identity_spatial_s2        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial train.seed=2"
+  "identity_spatial_s3        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial train.seed=3"
+  "identity_spatial_s4        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial train.seed=4"
+  "identity_spatial_s5        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial train.seed=5"
+  "canonical_spatial_s0       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/canonical_spatial train.seed=0"
+  "canonical_spatial_s1       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/canonical_spatial train.seed=1"
+  "canonical_spatial_s2       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/canonical_spatial train.seed=2"
+  "canonical_spatial_s3       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/canonical_spatial train.seed=3"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_2_sync
+# DATASET: SQOOP rhs=18  (the only dataset this script touches -- generated
+# once, on demand, by the first run that needs it)
+# 18 runs, ~19 GPU-h sequential on one GPU.
+# WHY: PREREQ once per box: rm -rf data/sqoop-* (the token cells need scenes-bearing data; the first run regenerates it). the token controls are the only way to separate "the bus cannot do sqoop" from "perception cannot"; gated to x6 and the T16 arm complete the sync picture
+#     local  : bash bash_scripts/run_sqoop_rhs18_2_sync
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_2_sync
+# Runs of one cell share a cfg_hash in wandb -- group by it to pool draws
+# made on different boxes.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+# one dataset per campaign: built once, serially, before any GPU starts
+PREP="task=sqoop"
+
+RUNS=(
+  # ---- sync thesis ----
+  "sq_tokens_stim_s0            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s1            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s2            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s3            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_tokens_stim_s4            task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s0          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s1          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s2          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s3          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_tokens_static_s4          task=sqoop experiment=sqoop/sync/thesis/tokens_static train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_gated_s3                  task=sqoop experiment=sqoop/sync/thesis/gated train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_gated_s4                  task=sqoop experiment=sqoop/sync/thesis/gated train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_gated_s5                  task=sqoop experiment=sqoop/sync/thesis/gated train.seed=5 wandb.tags=[v16,explore2]"
+  "sq_canonical_T16_s0          task=sqoop experiment=sqoop/sync/thesis/canonical model.t_bus=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_canonical_T16_s1          task=sqoop experiment=sqoop/sync/thesis/canonical model.t_bus=16 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_canonical_T16_s2          task=sqoop experiment=sqoop/sync/thesis/canonical model.t_bus=16 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_identity_s4               task=sqoop experiment=sqoop/sync/thesis/identity train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_identity_s5               task=sqoop experiment=sqoop/sync/thesis/identity train.seed=5 wandb.tags=[v16,explore2]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

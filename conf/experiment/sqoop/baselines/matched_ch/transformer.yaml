@@ -1,0 +1,12 @@
+# @package _global_
+# ch=128 forces q_conditioning off broadcast_cat (which requires
+# encoder.ch < hidden_dim); "token" is what the SoC transformer already
+# uses, so this cell is also the cross-task-consistent variant.
+defaults:
+  - /experiment/sqoop/baselines/matched_ch/_family
+  - override /model: sqoop/transformer
+  - _self_
+model:
+  encoder:
+    ch: 128
+  q_conditioning: token

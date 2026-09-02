@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /experiment/sqoop/matched/_family
+  - override /model: sqoop/transformer
+  - _self_
+model:
+  encoder:
+    name: field

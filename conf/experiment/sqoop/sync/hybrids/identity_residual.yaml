@@ -1,0 +1,12 @@
+# @package _global_
+# IdentityBusNet with residual private cells: W_k = W_shared + delta_k,
+# deltas zero-initialised. Same function at init as the shared cell, but the
+# shared weights keep every slot's gradient -- the pooling plain private cells
+# give up. Registered: assembly rate >> plain identity (0/4 for cells_only);
+# ||delta_k|| shows WHEN slots individuate.
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  private_cells: residual

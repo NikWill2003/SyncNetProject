@@ -1,0 +1,11 @@
+# @package _global_
+# Both fixes at once -- the candidate headline model: residual private
+# cells (individuation without gradient starvation) + spatial claim prior
+# (assembly aid) on IdentityBusNet, per-module anchors on as always.
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  private_cells: residual
+  claim_prior: spatial

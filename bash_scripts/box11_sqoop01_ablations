@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# BOX 11 -- DATASET: SQOOP rhs=1  |  12 runs, ~16 h
+# WHY: does the L2 ordering survive maximum sparsity? six cells x2 seeds
+#     bash bash_scripts/box11_sqoop01_ablations      (tmux; one GPU, sequential)
+# Runs of one cell share a cfg_hash in wandb; group by it to pool draws.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box11_sqoop01_ablations
+mkdir -p "$LOG"
+
+RUNS=(
+  "sq1_abl_medium_lines_attn_s0 task=sqoop experiment=sqoop/sync/ablations/medium_lines_attn dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_abl_medium_lines_attn_s1 task=sqoop experiment=sqoop/sync/ablations/medium_lines_attn dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_abl_medium_silent_s0     task=sqoop experiment=sqoop/sync/ablations/medium_silent dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_abl_medium_silent_s1     task=sqoop experiment=sqoop/sync/ablations/medium_silent dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_abl_addresses_static_s0  task=sqoop experiment=sqoop/sync/ablations/addresses_static dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_abl_addresses_static_s1  task=sqoop experiment=sqoop/sync/ablations/addresses_static dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_abl_gated_attn_s0        task=sqoop experiment=sqoop/sync/ablations/gated_attn dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_abl_gated_attn_s1        task=sqoop experiment=sqoop/sync/ablations/gated_attn dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_abl_gated_full_s0        task=sqoop experiment=sqoop/sync/ablations/gated_full dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_abl_gated_full_s1        task=sqoop experiment=sqoop/sync/ablations/gated_full dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_abl_identity_anchors_only_s0 task=sqoop experiment=sqoop/sync/ablations/identity_anchors_only dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_abl_identity_anchors_only_s1 task=sqoop experiment=sqoop/sync/ablations/identity_anchors_only dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

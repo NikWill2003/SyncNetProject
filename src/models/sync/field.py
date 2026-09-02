@@ -93,3 +93,31 @@ class OscillatorField(nn.Module):
             drive = self.J(z) + c
             z = self.normalise(z + self.dt * (self.rotate(z) + self.tangent(z, drive)))
         return z
+
+
+class AdaptedTrunk(nn.Module):
+    """A common encoder adapted to the field interface: 1x1 conv to
+    FIELD_CH so the oscillator machinery is unchanged. Grid size follows
+    the base encoder (the field is size-agnostic; pos_emb reads .spatial)."""
+
+    def __init__(self, base: nn.Module):
+        super().__init__()
+        self.base = base
+        self.adapt = nn.Conv2d(base.ch, FIELD_CH, 1)
+        self.spatial = base.spatial
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.adapt(self.base(x))
+
+
+def build_field_trunk(enc_cfg, img_size: int, dataset: str) -> nn.Module:
+    """Default (enc_cfg absent or name 'field'): the FieldEncoder, exactly
+    as always -- the thesis cells never change. A named common encoder
+    routes through build_image_encoder + AdaptedTrunk."""
+    name = None
+    if enc_cfg:
+        name = enc_cfg.get('name') if isinstance(enc_cfg, dict) else getattr(enc_cfg, 'name', None)
+    if name in (None, 'field'):
+        return FieldEncoder(img_size)
+    from ..common.img_enc import build_image_encoder
+    return AdaptedTrunk(build_image_encoder(dict(enc_cfg), dataset))

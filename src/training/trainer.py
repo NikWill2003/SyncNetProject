@@ -159,78 +159,30 @@ class Trainer:
     
     # train and eval functions:
 
-    # def train_step(
-    #     self,
-    #     batch: dict[str, Any],
-    #     max_grad_norm: float=1.0
-    #     ) -> dict[str, float]:
-
-    #     self.model.train()
-    #     metrics = {}
-
-    #     out: dict = self.model(batch)
-    #     loss, loss_metrics = self.loss_fn(out, batch)
-    #     self.accelerator.backward(loss)
-
-    #     if self.accelerator.sync_gradients and max_grad_norm:
-    #         grad_norm = self.accelerator.clip_grad_norm_(
-    #             self.model.parameters(), max_grad_norm
-    #             )
-
-    #         if isinstance(grad_norm, Tensor):
-    #             metrics |= section({'grad_norm': grad_norm.item()}, 'optim')
-
-    #     self.optimiser.step()
-    #     self.scheduler.step()
-    #     self.optimiser.zero_grad()
-
-    #     metrics |= section(out.get('metrics', {}), 'model')
-    #     metrics |= section(loss_metrics, 'loss')
-    #     metrics |= section(self.callbacks.on_train_step_end(self, out, batch), 'callbacks')
-    #     metrics |= section({'lr': float(self.optimiser.param_groups[0]['lr'])}, 'optim')
-
-    #     return metrics
-
     def train_step(
         self,
         batch: dict[str, Any],
-        max_grad_norm: float = 1.0
+        max_grad_norm: float=1.0
         ) -> dict[str, float]:
 
         self.model.train()
         metrics = {}
 
-        def sync_time():
-            torch.cuda.synchronize()
-            return time.perf_counter()
-
-        t0 = sync_time()
-
         out: dict = self.model(batch)
         loss, loss_metrics = self.loss_fn(out, batch)
-        t1 = sync_time()
-
         self.accelerator.backward(loss)
-        t2 = sync_time()
 
         if self.accelerator.sync_gradients and max_grad_norm:
-            grad_norm = self.accelerator.clip_grad_norm_(self.model.parameters(), max_grad_norm)
+            grad_norm = self.accelerator.clip_grad_norm_(
+                self.model.parameters(), max_grad_norm
+                )
+
             if isinstance(grad_norm, Tensor):
                 metrics |= section({'grad_norm': grad_norm.item()}, 'optim')
-        t3 = sync_time()
 
         self.optimiser.step()
         self.scheduler.step()
         self.optimiser.zero_grad()
-        t4 = sync_time()
-
-        if self.opt_step % 500 == 0:
-            print(
-                f'PROFILE | forward={(t1-t0)*1000:.3f} ms | '
-                f'backward={(t2-t1)*1000:.3f} ms | '
-                f'clip={(t3-t2)*1000:.3f} ms | '
-                f'optim={(t4-t3)*1000:.3f} ms'
-            )
 
         metrics |= section(out.get('metrics', {}), 'model')
         metrics |= section(loss_metrics, 'loss')

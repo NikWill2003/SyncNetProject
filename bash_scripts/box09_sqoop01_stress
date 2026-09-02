@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# BOX 09 -- DATASET: SQOOP rhs=1  |  28 runs, ~26 h
+# WHY: held-out-pair generalisation is the SQOOP chapter claim: baselines x3, gated x5, token controls x3, field for the record
+#     bash bash_scripts/box09_sqoop01_stress      (tmux; one GPU, sequential)
+# Runs of one cell share a cfg_hash in wandb; group by it to pool draws
+# scattered across boxes.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box09_sqoop01_stress
+mkdir -p "$LOG"
+
+RUNS=(
+  "sq1_base_film_s0             task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_base_film_s1             task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_base_film_s2             task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_base_conv_s0             task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_base_conv_s1             task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_base_conv_s2             task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_base_relnet_s0           task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_base_relnet_s1           task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_base_relnet_s2           task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_base_transformer_s0      task=sqoop experiment=sqoop/baselines/thesis/transformer dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_base_transformer_s1      task=sqoop experiment=sqoop/baselines/thesis/transformer dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_base_transformer_s2      task=sqoop experiment=sqoop/baselines/thesis/transformer dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_gated_s0                 task=sqoop experiment=sqoop/sync/thesis/gated dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_gated_s1                 task=sqoop experiment=sqoop/sync/thesis/gated dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_gated_s2                 task=sqoop experiment=sqoop/sync/thesis/gated dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_gated_s3                 task=sqoop experiment=sqoop/sync/thesis/gated dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,explore2]"
+  "sq1_gated_s4                 task=sqoop experiment=sqoop/sync/thesis/gated dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,explore2]"
+  "sq1_tokens_stim_s0           task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_tokens_stim_s1           task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_tokens_stim_s2           task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_tokens_static_s0         task=sqoop experiment=sqoop/sync/thesis/tokens_static dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_tokens_static_s1         task=sqoop experiment=sqoop/sync/thesis/tokens_static dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_tokens_static_s2         task=sqoop experiment=sqoop/sync/thesis/tokens_static dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_canonical_s0             task=sqoop experiment=sqoop/sync/thesis/canonical dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_canonical_s1             task=sqoop experiment=sqoop/sync/thesis/canonical dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+  "sq1_canonical_s2             task=sqoop experiment=sqoop/sync/thesis/canonical dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,explore2]"
+  "sq1_identity_s0              task=sqoop experiment=sqoop/sync/thesis/identity dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,explore2]"
+  "sq1_identity_s1              task=sqoop experiment=sqoop/sync/thesis/identity dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

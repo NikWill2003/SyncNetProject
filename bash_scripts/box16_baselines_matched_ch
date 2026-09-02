@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# BOX 16 -- channel-matched baselines: every encoder at ch=128 per
+# dataset. Only the cells that deviated need running (shared_workspace on
+# both tasks, transformer on sqoop); the other four baselines are already
+# at 128 and their thesis runs serve as the matched runs. NOTE: this box
+# touches BOTH datasets -- split the two halves if that matters.
+#     bash bash_scripts/box16_baselines_matched_ch
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box16_baselines_matched_ch
+mkdir -p "$LOG"
+
+RUNS=(
+  "soc_sw_ch128_s0    task=sort_of_clevr experiment=sort_of_clevr/baselines/matched_ch/shared_workspace train.seed=0"
+  "soc_sw_ch128_s1    task=sort_of_clevr experiment=sort_of_clevr/baselines/matched_ch/shared_workspace train.seed=1"
+  "soc_sw_ch128_s2    task=sort_of_clevr experiment=sort_of_clevr/baselines/matched_ch/shared_workspace train.seed=2"
+  "sq_sw_ch128_s0     task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=0"
+  "sq_sw_ch128_s1     task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=1"
+  "sq_sw_ch128_s2     task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=2"
+  "sq_transf_ch128_s0 task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=0"
+  "sq_transf_ch128_s1 task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=1"
+  "sq_transf_ch128_s2 task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=2"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

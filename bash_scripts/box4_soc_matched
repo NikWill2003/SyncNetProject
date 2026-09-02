@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# BOX 4 -- the encoder-matched arm (film/conv on the FieldEncoder trunk,
+# busnet on the common cnn; registered: gaps that persist are mechanism,
+# gaps that close were the encoder) + canonical capacity probes.
+# ~13 runs, ~9-12 h. Requires the current tree (matched/ cells are new).
+#     bash bash_scripts/box4_soc_matched          (inside tmux; single GPU, sequential)
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/$(basename "$0")
+mkdir -p "$LOG"
+
+RUNS=(
+  "matched_film_fieldenc_s0   task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=0"
+  "matched_film_fieldenc_s1   task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=1"
+  "matched_film_fieldenc_s2   task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=2"
+  "matched_conv_fieldenc_s0   task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=0"
+  "matched_conv_fieldenc_s1   task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=1"
+  "matched_conv_fieldenc_s2   task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=2"
+  "matched_busnet_cnnenc_s0   task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=0"
+  "matched_busnet_cnnenc_s1   task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=1"
+  "matched_busnet_cnnenc_s2   task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=2"
+  "soc_canonical_d8_s0        task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.phase_dim=8 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_canonical_d8_s1        task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.phase_dim=8 train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_canonical_msg8_s0      task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.msg_dim=8 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_canonical_msg8_s1      task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.msg_dim=8 train.seed=1 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

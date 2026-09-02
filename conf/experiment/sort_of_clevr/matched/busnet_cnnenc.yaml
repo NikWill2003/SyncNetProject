@@ -1,0 +1,11 @@
+# @package _global_
+# The reverse arm: canonical busnet over the common cnn trunk (grid
+# follows the encoder; the field machinery is size-agnostic).
+defaults:
+  - /experiment/sort_of_clevr/matched/_family
+  - override /model: sort_of_clevr/busnet
+  - _self_
+model:
+  encoder:
+    name: cnn
+    ch: 24

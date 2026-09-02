@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# run_smoke_test
+# DATASET: Sort-of-CLEVR (tiny override -- NOT the protocol dataset)
+# 4 runs, ~6-10 minutes total. Costs a few cents.
+# WHY: end-to-end proof of the whole pipeline on a real rented box BEFORE
+# committing a multi-day campaign. It exercises, in order:
+#   dataset generation -> model build -> training -> eval + callbacks ->
+#   wandb logging -> checkpointing -> the ok/FAIL contract -> multi-GPU
+#   queue dispatch (if the box has >1 GPU) -> outputs sync -> destroy.
+# One run is a DELIBERATE FAILURE: it must print FAIL, the campaign must
+# continue, and the campaign must exit non-zero. That proves error
+# handling works, so a real campaign cannot fail silently.
+#     local  : bash bash_scripts/run_smoke_test
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_smoke_test
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+# tiny dataset: 2k scenes instead of 36k, so prep takes ~1 min not ~10
+SMALL="dataset.train_size=2000 dataset.test_size=500 dataset.nb_questions=4"
+FAST="train.n_steps=300 train.train_bs=64 train.val_bs=256 logging.eval_log_interval=150 logging.train_log_interval=100"
+
+PREP="task=sort_of_clevr $SMALL"
+
+RUNS=(
+  "smoke_canonical    task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical    train.seed=0 $SMALL $FAST wandb.tags=[v16,smoke]"
+  "smoke_hybrid       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=0 $SMALL $FAST wandb.tags=[v16,smoke]"
+  "smoke_baseline     task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/film     train.seed=0 $SMALL $FAST wandb.tags=[v16,smoke]"
+  "smoke_mustfail     task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/NO_SUCH_CELL train.seed=0"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

@@ -5,6 +5,7 @@ from pathlib import Path
 import math
 from collections import defaultdict
 import hashlib
+import json
 
 import torch.nn as nn
 from accelerate import Accelerator
@@ -49,7 +50,19 @@ def get_wandb_init(cfg: Config, out_dir: str) -> dict[str, Any]:
         group = None
         auto_tags = []
 
-    auto_tags += [f'model:{model_choice}', f'dataset:{cfg.dataset.name}']
+    # cfg_hash: identical configs get the same 10-char id regardless of how
+    # they were launched (override spelling, box, machine). Seed is stripped,
+    # so seeded reruns of one cell share a hash -- group by it in wandb to
+    # collect distributed draws of the same config.
+    resolved = OmegaConf.to_container(OmegaConf.structured(cfg), resolve=True)
+    resolved.get('train', {}).pop('seed', None)
+    cfg_hash = hashlib.sha256(
+        json.dumps(resolved, sort_keys=True, default=str).encode('utf-8')
+    ).hexdigest()[:10]
+    if group is None:
+        group = f'cfg:{cfg_hash}'
+
+    auto_tags += [f'model:{model_choice}', f'dataset:{cfg.dataset.name}', f'cfg:{cfg_hash}']
     if exp_choice:
         auto_tags.append(f'exp:{exp_choice}')
 
@@ -58,7 +71,8 @@ def get_wandb_init(cfg: Config, out_dir: str) -> dict[str, Any]:
         'name': cfg.wandb.run_name or name,
         'group': group,
         'tags': list(cfg.wandb.tags) + auto_tags,
-        'notes': ' '.join(overrides), 
+        'notes': ' '.join(overrides),
+        'config': {'cfg_hash': cfg_hash},
         'job_type': 'train',
         'dir': out_dir,
     }

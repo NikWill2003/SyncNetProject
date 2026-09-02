@@ -32,11 +32,12 @@ from .components import (KuramotoStep, PartitionRead, PhaseNative,
                          PrivateLines, phase_shuffle)
 from .components.readout import VoteReadout
 from .conditioning import QuestionPathways
-from .field import FIELD_CH, FieldEncoder
+from .field import FIELD_CH, build_field_trunk
 
 
 @dataclass
 class GatedNetConfig(ModelConfig):
+    encoder: dict[str, Any] | None = None
     name: str = 'gated'
     grid: int = 2                        # grid^2 modules, one per region
     module_dim: int = 96
@@ -55,6 +56,7 @@ class GatedNet(nn.Module):
     GATE_OVERRIDES: ClassVar[tuple[str, ...]] = ('open', 'zero')
 
     def __init__(self, cfg: GatedNetConfig, dataset: str, answer_dim: int):
+        self._dataset = dataset
         super().__init__()
         self.cfg = cfg
         spec = _dataset_spec(dataset)
@@ -65,7 +67,7 @@ class GatedNet(nn.Module):
         self.M, self.dm, self.d, self.T = M, dm, d, cfg.t_steps
         self.N = M                                                           # no head: votes
 
-        self.field_enc = FieldEncoder(self.img_size)
+        self.field_enc = build_field_trunk(cfg.encoder, self.img_size, self._dataset)
         S = self.field_enc.spatial
         self.pos_emb = nn.Parameter(0.02 * torch.randn(1, FIELD_CH, S, S))
         self.binder = PartitionRead(FIELD_CH, TOK_DIM, grid=cfg.grid)

@@ -1,12 +1,9 @@
-# SyncNetProject — runtime dependencies
-# Versions are the set the pipeline was last verified against (2026-07-31);
-# lower bounds chosen at the last API boundary each package actually relies on.
-
-torch>=2.4          # tested 2.13.0 (install the cu12x wheel on the 4090 box)
-numpy>=2.0          # tested 2.4.4
-hydra-core>=1.3,<1.4  # tested 1.3.4; config layout uses version_base='1.3'
-omegaconf>=2.3,<2.4   # tested 2.3.1
-accelerate>=1.0     # tested 1.14.0
-wandb>=0.17         # tested 0.28.1
-matplotlib>=3.8     # tested 3.10.8 (Agg backend only; callbacks/viz)
-opencv-python-headless>=4.9  # tested 4.13.0.92 (dataset generator only)
+accelerate
+hydra-core
+omegaconf
+wandb
+numpy
+Pillow
+matplotlib
+opencv-python-headless
+pandas

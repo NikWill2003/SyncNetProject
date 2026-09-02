@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - /experiment/sort_of_clevr/matched/_family
+  - override /model: sort_of_clevr/shared_workspace
+  - _self_
+model:
+  encoder:
+    name: field

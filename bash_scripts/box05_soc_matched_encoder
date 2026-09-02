@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# BOX 05 -- DATASET: Sort-of-CLEVR  |  15 runs, ~8 h
+# WHY: closes the encoder confound: baselines on the field trunk, busnet on the common cnn
+#     bash bash_scripts/box05_soc_matched_encoder      (tmux; one GPU, sequential)
+# Runs of one cell share a cfg_hash in wandb; group by it to pool draws
+# scattered across boxes.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box05_soc_matched_encoder
+mkdir -p "$LOG"
+
+RUNS=(
+  "matched_film_fieldenc_s0     task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=0"
+  "matched_film_fieldenc_s1     task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=1"
+  "matched_film_fieldenc_s2     task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=2"
+  "matched_film_fieldenc_s3     task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=3"
+  "matched_film_fieldenc_s4     task=sort_of_clevr experiment=sort_of_clevr/matched/film_fieldenc train.seed=4"
+  "matched_conv_fieldenc_s0     task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=0"
+  "matched_conv_fieldenc_s1     task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=1"
+  "matched_conv_fieldenc_s2     task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=2"
+  "matched_conv_fieldenc_s3     task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=3"
+  "matched_conv_fieldenc_s4     task=sort_of_clevr experiment=sort_of_clevr/matched/conv_fieldenc train.seed=4"
+  "matched_busnet_cnnenc_s0     task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=0"
+  "matched_busnet_cnnenc_s1     task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=1"
+  "matched_busnet_cnnenc_s2     task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=2"
+  "matched_busnet_cnnenc_s3     task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=3"
+  "matched_busnet_cnnenc_s4     task=sort_of_clevr experiment=sort_of_clevr/matched/busnet_cnnenc train.seed=4"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

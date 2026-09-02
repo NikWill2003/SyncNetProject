@@ -24,7 +24,9 @@
 #
 #     GPU i (of 8):  SHARD=i NSHARDS=8 GPU=i bash bash_scripts/explore1
 # or just:           bash bash_scripts/explore1_launch   (prep + all 8)
-# Logs: bash_scripts/logs/explore1/.
+# Logs: bash_scripts/logs/explore1/.  EXTRA appends overrides to every
+# run -- e.g. EXTRA=train.compile_model=false if 8-way compile contention
+# dominates on a shared box (measure steady-state sps first).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 LOG=bash_scripts/logs/explore1
@@ -267,7 +269,7 @@ FAILED=0
 for spec in "${QUEUE[@]}"; do
   set -- $spec
   name=$1; shift
-  if CUDA_VISIBLE_DEVICES=$GPU python -u -m scripts.main "$@" \
+  if CUDA_VISIBLE_DEVICES=$GPU python -u -m scripts.main "$@" ${EXTRA:-} \
        2>&1 | tee "$LOG/$name.log"
   then echo "ok   $name"
   else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1

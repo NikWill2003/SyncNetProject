@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# BOX 05 -- DATASET: Sort-of-CLEVR   (every run in this script uses this
+# one dataset, so it is generated at most once on the box)
+# The T-regime arms. Registered: canonical T16 assembly rate <= T8 with
+# per-assembled accuracy unchanged; gated gains at t_steps=16.
+#     bash bash_scripts/box05_soc_T_arms      (tmux; one GPU, sequential)
+# Runs of one cell across boxes share a cfg_hash in wandb -- group by it
+# to pool distributed draws.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box05_soc_T_arms
+mkdir -p "$LOG"
+
+RUNS=(
+  "soc_canonical_T16_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s1         task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s2         task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s3         task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=3 wandb.tags=[v16,explore2]"
+  "soc_canonical_T16_s4         task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=16 train.seed=4 wandb.tags=[v16,explore2]"
+  "soc_canonical_T4_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=4 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_canonical_T4_s1          task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=4 train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_canonical_T4_s2          task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical model.t_bus=4 train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_gated_T16_s0             task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated model.t_steps=16 train.seed=0 wandb.tags=[v16,explore2]"
+  "soc_gated_T16_s1             task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated model.t_steps=16 train.seed=1 wandb.tags=[v16,explore2]"
+  "soc_gated_T16_s2             task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated model.t_steps=16 train.seed=2 wandb.tags=[v16,explore2]"
+  "soc_gated_s5                 task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated train.seed=5 wandb.tags=[v16,explore2]"
+  "soc_gated_s6                 task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated train.seed=6 wandb.tags=[v16,explore2]"
+  "soc_gated_s7                 task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/gated train.seed=7 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

@@ -1,0 +1,9 @@
+# @package _global_
+# The prior alone on the canonical model -- isolates how much of any
+# hybrid gain is the spatial prior rather than identity.
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/busnet
+  - _self_
+model:
+  claim_prior: spatial

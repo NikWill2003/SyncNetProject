@@ -37,7 +37,7 @@ from ...core.contracts import VQABatch, VQAOutput
 from .components import (CompetitiveClaim, Exchangeable, KuramotoStep,
                          PrivateLines, SharedBus, SilentBus, phase_shuffle)
 from .conditioning import QuestionPathways
-from .field import FIELD_CH, FIELD_GROUPS, FIELD_OSC_D, FieldEncoder, OscillatorField
+from .field import FIELD_CH, FIELD_GROUPS, FIELD_OSC_D, OscillatorField, build_field_trunk
 from .components.readout import HeadReadout
 
 TOK_DIM = 64
@@ -45,6 +45,12 @@ TOK_DIM = 64
 
 @dataclass
 class BusNetConfig(ModelConfig):
+    # None | 'spatial' -- see CompetitiveClaim; 'spatial' adds a learned
+    # per-slot cell bias to the competition logits (assembly aid).
+    claim_prior: str | None = None
+    # optional shared perception: {'name': 'cnn'|'patchify', ...} routes the
+    # trunk through the common encoders (matched/ cells); None = FieldEncoder
+    encoder: dict[str, Any] | None = None
     name: str = 'busnet'
     n_modules: int = 6
     module_dim: int = 96
@@ -75,6 +81,7 @@ class BusNet(nn.Module):
     GATE_OVERRIDES: ClassVar[tuple[str, ...]] = ()
 
     def __init__(self, cfg: BusNetConfig, dataset: str, answer_dim: int):
+        self._dataset = dataset
         super().__init__()
         self.cfg = cfg
         spec = _dataset_spec(dataset)
@@ -97,13 +104,15 @@ class BusNet(nn.Module):
 
     # -- construction, overridable by subclasses --------------------------
     def _build_perception(self, cfg: BusNetConfig) -> None:
-        self.field_enc = FieldEncoder(self.img_size)
+        self.field_enc = build_field_trunk(cfg.encoder, self.img_size, self._dataset)
         S = self.field_enc.spatial
         self.pos_emb = nn.Parameter(0.02 * torch.randn(1, FIELD_CH, S, S))
         self.field = OscillatorField()
         self.binder = CompetitiveClaim(FIELD_CH, TOK_DIM, cfg.n_modules,
                                        FIELD_GROUPS, FIELD_OSC_D,
-                                       per_module_anchors=self._per_module_anchors(cfg))
+                                       per_module_anchors=self._per_module_anchors(cfg),
+                                       claim_prior=getattr(cfg, "claim_prior", None),
+                                       n_cells=self.field_enc.spatial ** 2)
         self.anchor_to_phase = nn.Linear(FIELD_GROUPS * FIELD_OSC_D, cfg.phase_dim)
 
     def _per_module_anchors(self, cfg: BusNetConfig) -> bool:

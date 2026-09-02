@@ -1,19 +1,15 @@
-/outputs/
-/.vscode/
-/multirun/
-/wandb/
+# secrets and local state -- never commit
+.env
+.vast/
+
+# generated data and run artefacts
+data/
+outputs/
+multirun/
+results/
+bash_scripts/logs/
+wandb/
+
 __pycache__/
-/data/
-debug.log
-TODO.md
-/notebooks/
-/soq-notebooks/
-/sqoop-notebooks/
-*.zip
-/legacy_models/
-/logs/
-/legacy/
-/figures/
-*.ipynb
-*/logs/
-*/verify/
+*.pyc
+.ipynb_checkpoints/

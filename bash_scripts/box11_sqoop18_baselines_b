@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# BOX 11 -- DATASET: SQOOP rhs=18   (every run in this script uses this
+# one dataset, so it is generated at most once on the box)
+# Light sqoop baselines x5 + the ch=128 matched cells.
+#     bash bash_scripts/box11_sqoop18_baselines_b      (tmux; one GPU, sequential)
+# Runs of one cell across boxes share a cfg_hash in wandb -- group by it
+# to pool distributed draws.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+LOG=bash_scripts/logs/box11_sqoop18_baselines_b
+mkdir -p "$LOG"
+
+RUNS=(
+  "sq_base_transformer_s0       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s1       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s2       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s3       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_transformer_s4       task=sqoop experiment=sqoop/baselines/thesis/transformer train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s0     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s1     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s2     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s3     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_question_only_s4     task=sqoop experiment=sqoop/baselines/thesis/question_only train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s0  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s1  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s2  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s3  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=3 wandb.tags=[v16,explore2]"
+  "sq_base_shared_workspace_s4  task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.seed=4 wandb.tags=[v16,explore2]"
+  "sq_sw_ch128_s0               task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_sw_ch128_s1               task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_sw_ch128_s2               task=sqoop experiment=sqoop/baselines/matched_ch/shared_workspace train.seed=2 wandb.tags=[v16,explore2]"
+  "sq_transf_ch128_s0           task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=0 wandb.tags=[v16,explore2]"
+  "sq_transf_ch128_s1           task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=1 wandb.tags=[v16,explore2]"
+  "sq_transf_ch128_s2           task=sqoop experiment=sqoop/baselines/matched_ch/transformer train.seed=2 wandb.tags=[v16,explore2]"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+  set -- $spec
+  name=$1; shift
+  if python -u -m scripts.main "$@" 2>&1 | tee "$LOG/$name.log"
+  then echo "ok   $name"
+  else echo "FAIL $name  ($LOG/$name.log)"; FAILED=1
+  fi
+done
+exit $FAILED

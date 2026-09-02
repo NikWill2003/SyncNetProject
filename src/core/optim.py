@@ -13,8 +13,7 @@ def build_optim(model: nn.Module, optim_cfg: OptimConfig) -> Optimizer:
         return AdamW(
             model.parameters(), 
             optim_cfg.lr, 
-            weight_decay=optim_cfg.weight_decay,
-            fused=True
+            weight_decay=optim_cfg.weight_decay
             )
     else:
         raise ValueError(f'unrecognised optimiser: {optim_cfg.optimiser}')

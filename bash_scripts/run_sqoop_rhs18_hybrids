@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_hybrids
+# DATASET: SQOOP rhs=18
+# 15 runs.
+# WHY: can anything revive the field binder on sqoop? the two hybrids plus the clean stem-depth test (cnnenc = the paper 6-layer stem at the same width and grid; only depth changes). PREREQ once: rm -rf data/sqoop-*
+#     local  : bash bash_scripts/run_sqoop_rhs18_hybrids
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_hybrids
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+# one dataset per campaign: built once, serially, before any GPU starts
+PREP="task=sqoop"
+
+RUNS=(
+  "sq_identity_hybrid_s0      task=sqoop experiment=sqoop/sync/hybrids/identity_hybrid train.seed=0"
+  "sq_identity_hybrid_s1      task=sqoop experiment=sqoop/sync/hybrids/identity_hybrid train.seed=1"
+  "sq_identity_hybrid_s2      task=sqoop experiment=sqoop/sync/hybrids/identity_hybrid train.seed=2"
+  "sq_identity_spatial_s0     task=sqoop experiment=sqoop/sync/hybrids/identity_spatial train.seed=0"
+  "sq_identity_spatial_s1     task=sqoop experiment=sqoop/sync/hybrids/identity_spatial train.seed=1"
+  "sq_identity_residual_s0    task=sqoop experiment=sqoop/sync/hybrids/identity_residual train.seed=0"
+  "sq_identity_residual_s1    task=sqoop experiment=sqoop/sync/hybrids/identity_residual train.seed=1"
+  "sq_canonical_spatial_s0    task=sqoop experiment=sqoop/sync/hybrids/canonical_spatial train.seed=0"
+  "sq_canonical_spatial_s1    task=sqoop experiment=sqoop/sync/hybrids/canonical_spatial train.seed=1"
+  "sq_busnet_cnnenc_s0        task=sqoop experiment=sqoop/matched/busnet_cnnenc train.seed=0"
+  "sq_busnet_cnnenc_s1        task=sqoop experiment=sqoop/matched/busnet_cnnenc train.seed=1"
+  "sq_identity_busnet_cnnenc_s0 task=sqoop experiment=sqoop/matched/identity_busnet_cnnenc train.seed=0"
+  "sq_identity_busnet_cnnenc_s1 task=sqoop experiment=sqoop/matched/identity_busnet_cnnenc train.seed=1"
+  "sq_gated_cnnenc_s0         task=sqoop experiment=sqoop/matched/gated_cnnenc train.seed=0"
+  "sq_gated_cnnenc_s1         task=sqoop experiment=sqoop/matched/gated_cnnenc train.seed=1"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

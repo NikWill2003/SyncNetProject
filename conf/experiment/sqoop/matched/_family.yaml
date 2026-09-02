@@ -1,0 +1,12 @@
+# @package _global_
+# Encoder-matched cells on SQOOP (scratch tier). Two directions:
+#  - *_fieldenc : a baseline on the sync family's FieldEncoder trunk
+#  - *_cnnenc   : a sync model on the common cnn trunk (deeper stem)
+# The second direction matters here: every field-binder model flatlines at
+# .500 on sqoop while gated reaches .974, and a 2-stage stem over 36 letter
+# glyphs is a prime suspect (Bahdanau et al. used a 6-layer stem, 8 for
+# RelNet, feature dim 64 throughout).
+defaults:
+  - /experiment/sqoop/_protocol
+wandb:
+  tags: [v16, matched]

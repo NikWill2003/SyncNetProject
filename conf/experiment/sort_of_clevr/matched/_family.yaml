@@ -1,0 +1,10 @@
+# @package _global_
+# Encoder-matched comparisons (scratch tier): the confound-closing arm.
+# Baselines run on the sync family's FieldEncoder trunk; busnet runs on
+# the common cnn encoder. Registered reading, before results: if the
+# sync-vs-baseline gaps persist under a shared encoder they are mechanism;
+# if they close, the encoder was carrying them.
+defaults:
+  - /experiment/sort_of_clevr/_protocol
+wandb:
+  tags: [v16, matched]

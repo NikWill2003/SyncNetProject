@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+WORKDIR="${WORKDIR:-/workspace/SyncNetProject}"
+RUN_SCRIPT="${1:?Usage: vast_worker <run_script>}"
+STATUS_LOG=/workspace/status.log
+BOOTSTRAP_LOG=/workspace/bootstrap.log
+RUN_LOG=/workspace/run.log
+RUN_PID_FILE=/workspace/run.pid
+
+mkdir -p /workspace
+touch "$STATUS_LOG"
+
+status() {
+  printf '%s | %s\n' "$(date '+%H:%M:%S')" "$*" >> "$STATUS_LOG"
+}
+
+fail_worker() {
+  local code=$?
+  status "FAILED worker exit=$code"
+  touch /workspace/RUN_FAILED
+  rm -f "$RUN_PID_FILE"
+  exit "$code"
+}
+
+trap fail_worker ERR
+exec >>"$BOOTSTRAP_LOG" 2>&1
+
+status "WORKER_START $RUN_SCRIPT"
+cd "$WORKDIR"
+
+status "INSTALLING requirements.txt"
+python -m pip install -q --upgrade pip
+python -m pip install -q -r requirements.txt
+
+status "VERIFYING GPU"
+python - <<'PYCODE'
+import os
+import torch
+
+print("torch:", torch.__version__)
+print("cuda:", torch.version.cuda)
+print("gpu:", torch.cuda.get_device_name(0))
+print("capability:", torch.cuda.get_device_capability(0))
+print("cudnn:", torch.backends.cudnn.version())
+print("WANDB_API_KEY present:", bool(os.environ.get("WANDB_API_KEY")))
+PYCODE
+
+status "VERIFYING build (non-fatal)"
+if python verify/verify_reference.py > /workspace/verify.log 2>&1; then
+  status "VERIFY reference OK"
+else
+  status "WARNING verify_reference differs (torch/fixture drift; see verify.log)"
+fi
+python verify/verify_components.py >> /workspace/verify.log 2>&1 \
+  && status "VERIFY components OK" || status "WARNING verify_components failed"
+
+if [[ "$RUN_SCRIPT" = /* ]]; then
+  SCRIPT_PATH="$RUN_SCRIPT"
+else
+  SCRIPT_PATH="$WORKDIR/$RUN_SCRIPT"
+fi
+
+if [ ! -f "$SCRIPT_PATH" ]; then
+  echo "Run script not found: $SCRIPT_PATH"
+  exit 2
+fi
+
+touch /workspace/READY
+status "READY"
+NGPU="${NGPU:-$(nvidia-smi -L 2>/dev/null | wc -l)}"
+export NGPU
+status "GPUS $NGPU"
+status "RUNNING $RUN_SCRIPT"
+
+(
+  tail -n 0 -F "$RUN_LOG" 2>/dev/null | while IFS= read -r line; do
+    if [[ "$line" =~ ^ok[[:space:]]+(.+)$ ]]; then
+      status "COMPLETED ${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^FAIL[[:space:]]+([^[:space:]]+) ]]; then
+      status "FAILED ${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^\[shard\] ]] || [[ "$line" =~ launched ]] || [[ "$line" =~ ^shard[[:space:]] ]]; then
+      status "$line"
+    elif [[ "$line" =~ ^RUNNING[[:space:]] ]] || [[ "$line" =~ ^COMPLETED[[:space:]] ]] || [[ "$line" =~ ^FAILED[[:space:]] ]]; then
+      status "$line"
+    fi
+  done
+) &
+BRIDGE_PID=$!
+
+RUN_NAME="$(basename "$RUN_SCRIPT")"
+CAMPAIGN_LOG_DIR="$WORKDIR/bash_scripts/logs/$RUN_NAME"
+(
+  declare -A SEEN
+  while true; do
+    if [ -d "$CAMPAIGN_LOG_DIR" ]; then
+      while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        if [ -z "${SEEN[$file]+x}" ]; then
+          SEEN[$file]=1
+          status "RUNNING $(basename "$file" .log)"
+        fi
+      done < <(find "$CAMPAIGN_LOG_DIR" -maxdepth 1 -type f -name '*.log' -print 2>/dev/null | sort)
+    fi
+    sleep 3
+  done
+) &
+WATCHER_PID=$!
+
+START_TS=$(date +%s)
+set +e
+
+# Own process group, so Ctrl-C stop from the local controller can terminate the full campaign tree.
+setsid bash "$SCRIPT_PATH" >"$RUN_LOG" 2>&1 &
+RUN_PID=$!
+echo "$RUN_PID" > "$RUN_PID_FILE"
+NEXT_HEARTBEAT=$((START_TS + 300))
+
+while kill -0 "$RUN_PID" 2>/dev/null; do
+  sleep 10
+  NOW=$(date +%s)
+  if [ "$NOW" -ge "$NEXT_HEARTBEAT" ] && kill -0 "$RUN_PID" 2>/dev/null; then
+    status "RUNNING $RUN_SCRIPT elapsed=$((NOW - START_TS))s"
+    NEXT_HEARTBEAT=$((NOW + 300))
+  fi
+done
+
+wait "$RUN_PID"
+RUN_STATUS=$?
+rm -f "$RUN_PID_FILE"
+set -e
+
+kill "$BRIDGE_PID" "$WATCHER_PID" 2>/dev/null || true
+wait "$BRIDGE_PID" "$WATCHER_PID" 2>/dev/null || true
+
+if [ "$RUN_STATUS" -eq 0 ]; then
+  status "COMPLETED $RUN_SCRIPT"
+  touch /workspace/RUN_SUCCESS
+  exit 0
+fi
+
+status "FAILED $RUN_SCRIPT exit=$RUN_STATUS"
+touch /workspace/RUN_FAILED
+exit "$RUN_STATUS"
