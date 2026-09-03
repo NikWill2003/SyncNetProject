@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# sqoop_protocol_probe -- does the SoC-frozen protocol strangle SQOOP?
+#
+# Bahdanau et al. trained SQOOP with plain Adam, lr 1e-4, NO weight decay,
+# batch 64-128. Our frozen protocol uses AdamW lr 3e-4, wd 0.01, batch 256,
+# warmup-cosine. Their own MAC ablation shows wd 1e-3 already breaks the
+# model on this dataset (40.6% TRAIN error) -- and we use 0.01, ten times
+# that. This script isolates which knob is responsible.
+#
+# One dataset (sqoop rhs=18), one GPU, sequential. ~7-8 h.
+#   bash sqoop_protocol_probe            (run inside tmux)
+set -uo pipefail
+cd "$(dirname "$0")/.."          # repo root; adjust if you put this elsewhere
+LOG=bash_scripts/logs/sqoop_protocol_probe
+mkdir -p "$LOG"
+
+BASE="task=sqoop dataset.rhs_variety=18"
+TAG="wandb.tags=[v16,protocol_probe]"
+
+RUNS=(
+  # ---- conv: no binding, so this isolates the OPTIMISER ----------------
+  "conv_wd0            experiment=sqoop/baselines/thesis/conv optim.weight_decay=0"
+  "conv_wd0_lr1e4      experiment=sqoop/baselines/thesis/conv optim.weight_decay=0 optim.lr=1e-4"
+  "conv_paper          experiment=sqoop/baselines/thesis/conv optim.weight_decay=0 optim.lr=1e-4 train.train_bs=128 optim.lr_scheduler=constant"
+  # ---- busnet: does the field model escape once decay is off? ---------
+  "busnet_wd0_lr1e4    experiment=sqoop/sync/thesis/canonical optim.weight_decay=0 optim.lr=1e-4"
+  "busnet_paper        experiment=sqoop/sync/thesis/canonical optim.weight_decay=0 optim.lr=1e-4 train.train_bs=128 optim.lr_scheduler=constant"
+  # ---- controls: cheap, and they anchor the comparison ----------------
+  "tokens_paper        experiment=sqoop/sync/thesis/tokens_stim optim.weight_decay=0 optim.lr=1e-4 train.train_bs=128 optim.lr_scheduler=constant"
+  "gated_paper         experiment=sqoop/sync/thesis/gated optim.weight_decay=0 optim.lr=1e-4 train.train_bs=128 optim.lr_scheduler=constant"
+)
+
+FAILED=0
+for spec in "${RUNS[@]}"; do
+    read -r -a parts <<< "$spec"
+    name="${parts[0]}"
+    args=("${parts[@]:1}")
+
+    if CUDA_VISIBLE_DEVICES=0 python -u -m scripts.main \
+        $BASE "${args[@]}" $TAG 2>&1 | tee "$LOG/$name.log"
+    then
+        echo "ok   $name"
+    else
+        code=${PIPESTATUS[0]}
+        echo "FAIL $name exit=$code ($LOG/$name.log)"
+        FAILED=1
+    fi
+done
+
+exit "$FAILED"

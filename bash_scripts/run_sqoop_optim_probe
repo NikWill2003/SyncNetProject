@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# run_sqoop_optim_probe
+# DATASET: SQOOP rhs=18 (one dataset, full protocol size) -- plus a small
+# rhs=35 block at the end, which builds one more.
+# 22 runs, ~30-35 GPU-h on one GPU; ~8-9 h on 4.
+#
+# WHY: measured at init with scripts/diagnose_signal.py, sqoop gradients are
+# LARGE but barely agree across batches:
+#     sqoop canonical bs 64   SNR 0.369  cosine -0.02   (noise floor 0.354)
+#     sqoop canonical bs 256  SNR 0.643  cosine +0.12   <- the protocol batch
+#     sqoop tokens    bs 256  SNR 0.728  cosine +0.23
+#     SoC   canonical bs 64   SNR 0.854  cosine +0.69   <- a task that trains
+# So this is NOT a plateau (gradients are not zero) and NOT missing data. A
+# real descent direction exists at bs=256, roughly 6x weaker in agreement
+# than on SoC, and 100k Adam steps never accumulate enough to leave .500.
+# SNR also grew with batch size, so averaging recovers signal.
+#
+# This campaign tests exactly that: can optimisation alone break the .500
+# flatline? Effective batch is raised with grad_accum (memory-free), LR is
+# swept both ways, warmup lengthened, and an easier split included as the
+# curriculum control.
+#
+# READ: any run whose TRAIN accuracy leaves .500 is the answer -- note which
+# knob did it. All flat => optimisation is not the lever and the binding
+# prior (gated/hybrid) or a curriculum is required.
+#
+#     local  : bash bash_scripts/run_sqoop_optim_probe
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_optim_probe
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop"
+
+# 40k steps: enough for a break from .500 to be visible, 2.5x cheaper than
+# the 100k protocol. Diagnostics only -- separate tag, never in the tables.
+B="task=sqoop experiment=sqoop/sync/thesis/canonical train.n_steps=40000 wandb.tags=[v16,optim_probe]"
+
+RUNS=(
+  # ---- effective batch (grad_accum x 256). SNR grows ~sqrt(B), so if noise
+  #      is the whole story one of these leaves .500 ----
+  "eb256_s0      $B train.grad_accum=1  train.seed=0"
+  "eb1024_s0     $B train.grad_accum=4  train.seed=0"
+  "eb1024_s1     $B train.grad_accum=4  train.seed=1"
+  "eb2048_s0     $B train.grad_accum=8  train.seed=0"
+  "eb2048_s1     $B train.grad_accum=8  train.seed=1"
+  "eb4096_s0     $B train.grad_accum=16 train.seed=0"
+  # ---- learning rate. A weak-but-real direction can be swamped by too
+  #      large a step, or never accumulate with too small a one ----
+  "lr1e4_s0      $B optim.lr=1e-4 train.seed=0"
+  "lr1e3_s0      $B optim.lr=1e-3 train.seed=0"
+  "lr3e3_s0      $B optim.lr=3e-3 train.seed=0"
+  # ---- the pairing that theory prefers: big effective batch + bigger LR ----
+  "eb2048_lr1e3_s0  $B train.grad_accum=8 optim.lr=1e-3 train.seed=0"
+  "eb2048_lr1e3_s1  $B train.grad_accum=8 optim.lr=1e-3 train.seed=1"
+  "eb4096_lr3e3_s0  $B train.grad_accum=16 optim.lr=3e-3 train.seed=0"
+  # ---- warmup: 2k steps of tiny LR may waste the phase where the binder
+  #      still has usable structure; 10k may instead protect it ----
+  "warm200_s0    $B optim.lr_scheduler_params.warmup_steps=200 train.seed=0"
+  "warm10k_s0    $B optim.lr_scheduler_params.warmup_steps=10000 train.seed=0"
+  "warm10k_eb2048_s0 $B train.grad_accum=8 optim.lr_scheduler_params.warmup_steps=10000 train.seed=0"
+  # ---- fp32: bf16 rounding on an already-weak mean gradient is a plausible
+  #      way to lose the signal entirely ----
+  "fp32_s0       $B train.mixed_precision=no train.seed=0"
+  "fp32_eb2048_s0 $B train.mixed_precision=no train.grad_accum=8 train.seed=0"
+  # ---- longer horizon at the protocol setting: does it break out late? ----
+  "long100k_s0   task=sqoop experiment=sqoop/sync/thesis/canonical train.n_steps=100000 train.grad_accum=8 train.seed=0 wandb.tags=[v16,optim_probe]"
+  # ---- curriculum control: the easier split has more redundant structure,
+  #      so if THIS trains while rhs=18 does not, the fix is a curriculum ----
+  "rhs35_s0      $B dataset.rhs_variety=35 train.seed=0"
+  "rhs35_eb2048_s0 $B dataset.rhs_variety=35 train.grad_accum=8 train.seed=0"
+  # ---- and the same two knobs on the models that already differ, so any
+  #      win is attributable to optimisation rather than architecture ----
+  "tok_eb2048_s0 task=sqoop experiment=sqoop/sync/thesis/tokens_stim train.n_steps=40000 train.grad_accum=8 train.seed=0 wandb.tags=[v16,optim_probe]"
+  "hyb_eb2048_s0 task=sqoop experiment=sqoop/sync/hybrids/identity_hybrid train.n_steps=40000 train.grad_accum=8 train.seed=0 wandb.tags=[v16,optim_probe]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
