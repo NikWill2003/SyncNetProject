@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# run_sqoop_plateau_probe
+# DATASET: SQOOP rhs=18 -- BUT with several train_size values, so this box
+# builds one dataset per size (~1-2 min each at small sizes, ~5 min at 200k).
+# 26 runs, ~10-14 GPU-h on one GPU; ~4 h on 4.
+#
+# WHY: sqoop's exact 50/50 balance per (x,rel,y) cell means every partial
+# feature (is there an A? is there a B? question identity) has its positive
+# and negative gradients cancel IN EXPECTATION. Nothing beats chance until a
+# model can detect both glyphs AND compare positions -- no partial credit,
+# no gradient ladder. At small train_size the cancellation is only
+# approximate, so finite-sample imbalance leaves real signal and the model
+# memorises; at full size it vanishes and the surface is a plateau at ln 2.
+# That is the hypothesis for why every field-binder cell sits at exactly
+# .500 on sqoop while gated (free quadrant binding) reaches .974.
+#
+# READ IT AS A CURVE, not pass/fail. For each size, compare TRAIN accuracy
+# (does it fit at all?) against TEST accuracy (does it generalise?):
+#   memorises small, flatlines large  -> plateau/credit-assignment confirmed;
+#                                        the fix is a curriculum, not a new model
+#   flatlines at EVERY size           -> not a data-size effect at all
+#   tokens_* train where canonical does not -> perception, not credit assignment
+#
+#     local  : bash bash_scripts/run_sqoop_plateau_probe
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_plateau_probe
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+# smallest size first so the first verdict arrives in minutes
+PREP="task=sqoop dataset.train_size=5184 dataset.test_size=5184"
+
+# 20k steps is enough to see fit-or-plateau; these are diagnostics, not
+# protocol runs, so they are tagged separately and never enter the tables.
+S="train.n_steps=20000 wandb.tags=[v16,plateau_probe]"
+
+RUNS=(
+  # ---- canonical (the model that flatlines): does it fit at small sizes? ----
+  "can_5k_s0     task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=5184   dataset.test_size=5184 train.seed=0 $S"
+  "can_5k_s1     task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=5184   dataset.test_size=5184 train.seed=1 $S"
+  "can_20k_s0    task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=20736  dataset.test_size=5184 train.seed=0 $S"
+  "can_20k_s1    task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=20736  dataset.test_size=5184 train.seed=1 $S"
+  "can_50k_s0    task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=51840  dataset.test_size=5184 train.seed=0 $S"
+  "can_50k_s1    task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=51840  dataset.test_size=5184 train.seed=1 $S"
+  "can_200k_s0   task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=207360 dataset.test_size=5184 train.seed=0 $S"
+  "can_200k_s1   task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=207360 dataset.test_size=5184 train.seed=1 $S"
+  # ---- gated (the model that works): the control curve ----
+  "gat_5k_s0     task=sqoop experiment=sqoop/sync/thesis/gated dataset.train_size=5184   dataset.test_size=5184 train.seed=0 $S"
+  "gat_20k_s0    task=sqoop experiment=sqoop/sync/thesis/gated dataset.train_size=20736  dataset.test_size=5184 train.seed=0 $S"
+  "gat_50k_s0    task=sqoop experiment=sqoop/sync/thesis/gated dataset.train_size=51840  dataset.test_size=5184 train.seed=0 $S"
+  "gat_200k_s0   task=sqoop experiment=sqoop/sync/thesis/gated dataset.train_size=207360 dataset.test_size=5184 train.seed=0 $S"
+  # ---- tokens: perception removed. If these ALSO flatline it is credit
+  #      assignment, not glyph perception ----
+  "tok_5k_s0     task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.train_size=5184   dataset.test_size=5184 train.seed=0 $S"
+  "tok_20k_s0    task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.train_size=20736  dataset.test_size=5184 train.seed=0 $S"
+  "tok_50k_s0    task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.train_size=51840  dataset.test_size=5184 train.seed=0 $S"
+  "tok_200k_s0   task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.train_size=207360 dataset.test_size=5184 train.seed=0 $S"
+  # ---- film: a strong non-sync baseline on the same curve, so any plateau
+  #      is shown to be a property of the TASK rather than of SyncNet ----
+  "film_5k_s0    task=sqoop experiment=sqoop/baselines/thesis/film dataset.train_size=5184   dataset.test_size=5184 train.seed=0 $S"
+  "film_20k_s0   task=sqoop experiment=sqoop/baselines/thesis/film dataset.train_size=20736  dataset.test_size=5184 train.seed=0 $S"
+  "film_50k_s0   task=sqoop experiment=sqoop/baselines/thesis/film dataset.train_size=51840  dataset.test_size=5184 train.seed=0 $S"
+  "film_200k_s0  task=sqoop experiment=sqoop/baselines/thesis/film dataset.train_size=207360 dataset.test_size=5184 train.seed=0 $S"
+  # ---- easier splits at full-ish size: does MORE structure (rhs=35, or the
+  #      generous rhs=1 pairing) give the ladder that balance removed? ----
+  "can_rhs35_50k_s0  task=sqoop experiment=sqoop/sync/thesis/canonical dataset.rhs_variety=35 dataset.train_size=51840 dataset.test_size=5184 train.seed=0 $S"
+  "can_rhs35_200k_s0 task=sqoop experiment=sqoop/sync/thesis/canonical dataset.rhs_variety=35 dataset.train_size=207360 dataset.test_size=5184 train.seed=0 $S"
+  # ---- longer horizon at full size: is .500 a plateau it eventually leaves? ----
+  "can_200k_long_s0  task=sqoop experiment=sqoop/sync/thesis/canonical dataset.train_size=207360 dataset.test_size=5184 train.n_steps=60000 train.seed=0 wandb.tags=[v16,plateau_probe]"
+  "tok_200k_long_s0  task=sqoop experiment=sqoop/sync/thesis/tokens_stim dataset.train_size=207360 dataset.test_size=5184 train.n_steps=60000 train.seed=0 wandb.tags=[v16,plateau_probe]"
+  # ---- and the hybrids, in case the spatial prior supplies the missing ladder ----
+  "hyb_50k_s0    task=sqoop experiment=sqoop/sync/hybrids/identity_hybrid dataset.train_size=51840  dataset.test_size=5184 train.seed=0 $S"
+  "hyb_200k_s0   task=sqoop experiment=sqoop/sync/hybrids/identity_hybrid dataset.train_size=207360 dataset.test_size=5184 train.seed=0 $S"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

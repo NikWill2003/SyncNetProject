@@ -1,0 +1,10 @@
+# @package _global_
+# Best-of-both: the spatial prior INITIALISED to a slot-per-region grid (the gated model's
+# free binding as a starting point) on the bus model with anchors + private cells.
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  claim_prior: spatial
+  claim_prior_init: partition

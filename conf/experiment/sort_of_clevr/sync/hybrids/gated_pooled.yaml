@@ -1,0 +1,8 @@
+# @package _global_
+# Gated with the integrating readout on SoC.
+defaults:
+  - /experiment/sort_of_clevr/sync/hybrids/_family
+  - override /model: sort_of_clevr/gated
+  - _self_
+model:
+  readout: pooled

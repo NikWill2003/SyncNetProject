@@ -30,7 +30,7 @@ from ...core.contracts import VQABatch, VQAOutput
 from .busnet import TOK_DIM, _dataset_spec
 from .components import (KuramotoStep, PartitionRead, PhaseNative,
                          PrivateLines, phase_shuffle)
-from .components.readout import VoteReadout
+from .components.readout import PooledReadout, VoteReadout
 from .conditioning import QuestionPathways
 from .field import FIELD_CH, build_field_trunk
 
@@ -38,6 +38,8 @@ from .field import FIELD_CH, build_field_trunk
 @dataclass
 class GatedNetConfig(ModelConfig):
     encoder: dict[str, Any] | None = None
+    readout: str = 'vote'          # 'vote' (sum of per-module votes) | 'pooled'
+    readout_prior: bool = True     # keep the question-only prior term
     name: str = 'gated'
     grid: int = 2                        # grid^2 modules, one per region
     module_dim: int = 96
@@ -76,7 +78,8 @@ class GatedNet(nn.Module):
                                     private_cells=True, per_module_anchors=False)
         self.medium = PrivateLines(dm, cfg.msg_dim, d, self.N, gate=cfg.gate)
         self.dynamics = KuramotoStep(self.N, dm, d, cfg.dt)
-        self.readout = VoteReadout(dm, self.q_size, answer_dim)
+        Readout = {'vote': VoteReadout, 'pooled': PooledReadout}[cfg.readout]
+        self.readout = Readout(dm, self.q_size, answer_dim, use_prior=cfg.readout_prior)
 
     def _r_dim(self, cfg: GatedNetConfig) -> int:
         return cfg.msg_dim * cfg.grid ** 2 if cfg.gate == 'full' else cfg.msg_dim

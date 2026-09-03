@@ -48,6 +48,13 @@ class BusNetConfig(ModelConfig):
     # None | 'spatial' -- see CompetitiveClaim; 'spatial' adds a learned
     # per-slot cell bias to the competition logits (assembly aid).
     claim_prior: str | None = None
+    # 'zero' learns the spatial prior from nothing (SoC winner); 'partition'
+    # initialises it to a slot-per-region grid at claim_prior_scale, i.e. the
+    # gated model's free binding as a starting point that competition can
+    # refine -- the best-of-both candidate for SQOOP.
+    claim_prior_init: str = 'zero'
+    claim_prior_scale: float = 4.0
+    readout_prior: bool = True
     # optional shared perception: {'name': 'cnn'|'patchify', ...} routes the
     # trunk through the common encoders (matched/ cells); None = FieldEncoder
     encoder: dict[str, Any] | None = None
@@ -98,7 +105,7 @@ class BusNet(nn.Module):
         self.medium = self._build_medium(cfg)                                # first: the cell is sized by what it receives
         self.identity = self._build_identity(cfg)
         self.dynamics = KuramotoStep(self.N, dm, d, cfg.dt)
-        self.readout = HeadReadout(dm, self.q_size, answer_dim)
+        self.readout = HeadReadout(dm, self.q_size, answer_dim, use_prior=cfg.readout_prior)
         if cfg.addresses == 'static':
             self.z_static = nn.Parameter(F.normalize(torch.randn(self.N, d), dim=-1))
 
@@ -112,7 +119,9 @@ class BusNet(nn.Module):
                                        FIELD_GROUPS, FIELD_OSC_D,
                                        per_module_anchors=self._per_module_anchors(cfg),
                                        claim_prior=getattr(cfg, "claim_prior", None),
-                                       n_cells=self.field_enc.spatial ** 2)
+                                       n_cells=self.field_enc.spatial ** 2,
+                                       claim_prior_init=getattr(cfg, "claim_prior_init", "zero"),
+                                       claim_prior_scale=getattr(cfg, "claim_prior_scale", 4.0))
         self.anchor_to_phase = nn.Linear(FIELD_GROUPS * FIELD_OSC_D, cfg.phase_dim)
 
     def _per_module_anchors(self, cfg: BusNetConfig) -> bool:

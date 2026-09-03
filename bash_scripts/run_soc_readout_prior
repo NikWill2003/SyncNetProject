@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# run_soc_readout_prior
+# DATASET: Sort-of-CLEVR
+# 11 runs.
+# WHY: the two reminder questions on the SoC winner: drop the prior head (should be unchanged), and partition-vs-learned prior init; plus vote-vs-pooled readout on gated
+#     local  : bash bash_scripts/run_soc_readout_prior
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_soc_readout_prior
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  "soc_id_spatial_noprior_s0    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_noprior train.seed=0 wandb.tags=[v16,bestofboth]"
+  "soc_id_spatial_noprior_s1    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_noprior train.seed=1 wandb.tags=[v16,bestofboth]"
+  "soc_id_spatial_noprior_s2    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_noprior train.seed=2 wandb.tags=[v16,bestofboth]"
+  "soc_id_spatial_noprior_s3    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_noprior train.seed=3 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition train.seed=0 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_s1          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition train.seed=1 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_s2          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition train.seed=2 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_s3          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition train.seed=3 wandb.tags=[v16,bestofboth]"
+  "soc_gated_pooled_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/gated_pooled train.seed=0 wandb.tags=[v16,bestofboth]"
+  "soc_gated_pooled_s1          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/gated_pooled train.seed=1 wandb.tags=[v16,bestofboth]"
+  "soc_gated_pooled_s2          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/gated_pooled train.seed=2 wandb.tags=[v16,bestofboth]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

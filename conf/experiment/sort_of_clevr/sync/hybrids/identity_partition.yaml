@@ -1,0 +1,10 @@
+# @package _global_
+# Partition-initialised spatial prior on SoC: does a hard starting partition help, hurt, or
+# match the zero-initialised (learned) prior that assembles 5/6?
+defaults:
+  - /experiment/sort_of_clevr/sync/hybrids/_family
+  - override /model: sort_of_clevr/identity_busnet
+  - _self_
+model:
+  claim_prior: spatial
+  claim_prior_init: partition

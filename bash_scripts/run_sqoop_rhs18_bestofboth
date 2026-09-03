@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_bestofboth
+# DATASET: SQOOP rhs=18
+# 15 runs.
+# WHY: can the bus model take the gated model's free binding as a STARTING point (partition-initialised prior) and train on sqoop? plus the readout/prior questions on gated
+#     local  : bash bash_scripts/run_sqoop_rhs18_bestofboth
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_bestofboth
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop"
+
+RUNS=(
+  "sq_id_partition_s0           task=sqoop experiment=sqoop/sync/hybrids/identity_partition train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_s1           task=sqoop experiment=sqoop/sync/hybrids/identity_partition train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_s2           task=sqoop experiment=sqoop/sync/hybrids/identity_partition train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_cnn_s0       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_cnn_s1       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_cnn_s2       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq_can_partition_s0          task=sqoop experiment=sqoop/sync/hybrids/canonical_partition train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq_can_partition_s1          task=sqoop experiment=sqoop/sync/hybrids/canonical_partition train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_eb2048_s0    task=sqoop experiment=sqoop/sync/hybrids/identity_partition train.grad_accum=8 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq_id_partition_eb2048_s1    task=sqoop experiment=sqoop/sync/hybrids/identity_partition train.grad_accum=8 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq_gated_pooled_s0           task=sqoop experiment=sqoop/sync/hybrids/gated_pooled train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq_gated_pooled_s1           task=sqoop experiment=sqoop/sync/hybrids/gated_pooled train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq_gated_pooled_s2           task=sqoop experiment=sqoop/sync/hybrids/gated_pooled train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq_gated_noprior_s0          task=sqoop experiment=sqoop/sync/hybrids/gated_noprior train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq_gated_noprior_s1          task=sqoop experiment=sqoop/sync/hybrids/gated_noprior train.seed=1 wandb.tags=[v16,bestofboth]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

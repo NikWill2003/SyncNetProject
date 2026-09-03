@@ -1,0 +1,9 @@
+# @package _global_
+# Partition-initialised prior on the exchangeable model: isolates identity's contribution.
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/busnet
+  - _self_
+model:
+  claim_prior: spatial
+  claim_prior_init: partition

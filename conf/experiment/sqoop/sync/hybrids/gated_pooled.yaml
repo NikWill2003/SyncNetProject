@@ -1,0 +1,9 @@
+# @package _global_
+# Gated with an INTEGRATING readout (question-conditioned attention over modules) instead of
+# a sum of votes: does forcing integration through the medium limit module diversity?
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/gated
+  - _self_
+model:
+  readout: pooled

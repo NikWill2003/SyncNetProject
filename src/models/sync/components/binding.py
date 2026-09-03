@@ -22,7 +22,8 @@ class CompetitiveClaim(nn.Module):
     def __init__(self, feat_dim: int, slot_dim: int, n_slots: int,
                  n_groups: int, osc_dim: int, iters: int = 3,
                  beta: float = 8.0, per_module_anchors: bool = False,
-                 claim_prior: str | None = None, n_cells: int | None = None):
+                 claim_prior: str | None = None, n_cells: int | None = None,
+                 claim_prior_init: str = 'zero', claim_prior_scale: float = 4.0):
         super().__init__()
         self.n_slots, self.iters = n_slots, iters
         # claim_prior='spatial': a learned per-slot bias over cells, added to
@@ -35,7 +36,19 @@ class CompetitiveClaim(nn.Module):
         if claim_prior == 'spatial':
             if n_cells is None:
                 raise ValueError("claim_prior='spatial' needs n_cells")
-            self.cell_bias = nn.Parameter(torch.zeros(n_slots, n_cells))
+            bias = torch.zeros(n_slots, n_cells)
+            if claim_prior_init == 'partition':
+                # slot k is predisposed to the k-th cell of a rows x cols grid
+                # over the S x S field (K=6 -> 2x3). Extra slots stay unbiased.
+                S = int(round(n_cells ** 0.5))
+                rows = max(1, int(n_slots ** 0.5)); cols = -(-n_slots // rows)
+                ys = torch.arange(S).repeat_interleave(S); xs = torch.arange(S).repeat(S)
+                region = (ys * rows // S) * cols + (xs * cols // S)
+                for k in range(min(n_slots, rows * cols)):
+                    bias[k, region == k] = claim_prior_scale
+            elif claim_prior_init != 'zero':
+                raise ValueError(f"unknown claim_prior_init {claim_prior_init!r}")
+            self.cell_bias = nn.Parameter(bias)
             self.register_buffer('prior_scale', torch.ones(()))
         a_m = n_slots if per_module_anchors else 1
         self.anchor_mu = nn.Parameter(torch.randn(1, a_m, n_groups, osc_dim))

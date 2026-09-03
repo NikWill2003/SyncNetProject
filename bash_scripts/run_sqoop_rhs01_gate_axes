@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs01_gate_axes
+# DATASET: SQOOP rhs=1
+# 8 runs.
+# WHY: the compositional test of the GATE itself: does the phase gate beat content gates (attn/full) at rhs=1, and does the partition-initialised bus generalise there?
+#     local  : bash bash_scripts/run_sqoop_rhs01_gate_axes
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs01_gate_axes
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  "sq1_gated_pooled_s0          task=sqoop experiment=sqoop/sync/hybrids/gated_pooled dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq1_gated_pooled_s1          task=sqoop experiment=sqoop/sync/hybrids/gated_pooled dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq1_gated_attn_s0            task=sqoop experiment=sqoop/sync/ablations/gated_attn dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq1_gated_attn_s1            task=sqoop experiment=sqoop/sync/ablations/gated_attn dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq1_gated_full_s0            task=sqoop experiment=sqoop/sync/ablations/gated_full dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq1_gated_full_s1            task=sqoop experiment=sqoop/sync/ablations/gated_full dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_s0          task=sqoop experiment=sqoop/sync/hybrids/identity_partition dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_s1          task=sqoop experiment=sqoop/sync/hybrids/identity_partition dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

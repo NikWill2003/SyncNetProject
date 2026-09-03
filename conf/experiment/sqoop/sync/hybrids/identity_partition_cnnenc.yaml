@@ -1,0 +1,12 @@
+# @package _global_
+# As identity_partition, on the paper 6-layer stem (busnet_cnnenc reached .55-.60 alone).
+defaults:
+  - /experiment/sqoop/sync/hybrids/_family
+  - override /model: sqoop/identity_busnet
+  - _self_
+model:
+  claim_prior: spatial
+  claim_prior_init: partition
+  encoder:
+    name: cnn
+    ch: 64
