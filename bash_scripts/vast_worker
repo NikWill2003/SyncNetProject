@@ -47,8 +47,33 @@ status "PYTHON $(python -V 2>&1) at $(command -v python)"
 
 status "INSTALLING requirements.txt"
 python -m ensurepip --default-pip >/dev/null 2>&1 || true
-python -m pip install -q --upgrade pip
-python -m pip install -q -r requirements.txt
+# Ubuntu 24.04 images mark the system interpreter externally-managed (PEP 668):
+# pip then refuses to install ANYTHING and exits 1 in about a second. These
+# instances are disposable, so installing into the system env is correct here.
+export PIP_BREAK_SYSTEM_PACKAGES=1 PIP_ROOT_USER_ACTION=ignore PIP_DISABLE_PIP_VERSION_CHECK=1
+# If the image already ships torch, pin it so pip cannot pull a different one
+# in as a dependency of accelerate (a silent version change would also make the
+# golden fixtures drift). On a torch-less image this is a no-op and pip
+# installs whatever torch accelerate asks for.
+if python -c "import torch" >/dev/null 2>&1; then
+  TORCH_V="$(python -c "import torch;print(torch.__version__.split('+')[0])")"
+  printf 'torch==%s\n' "$TORCH_V" > /workspace/pip-constraints.txt
+  export PIP_CONSTRAINT=/workspace/pip-constraints.txt
+  status "TORCH preinstalled $TORCH_V (pinned; no re-download)"
+else
+  status "TORCH not in image -- pip will install it (~2.5 GB download)"
+fi
+python -m pip install -q --upgrade pip 2>/dev/null || status "WARNING pip self-upgrade skipped"
+if ! python -m pip install -q -r requirements.txt; then
+  status "PIP retrying with --break-system-packages --user"
+  if ! python -m pip install -q --break-system-packages --user -r requirements.txt; then
+    status "FAILED pip install (see bootstrap.log)"
+    python -m pip install -r requirements.txt 2>&1 | tail -n 15
+    touch /workspace/RUN_FAILED
+    exit 1
+  fi
+fi
+status "INSTALLED $(python -m pip --version 2>&1 | head -c 60)"
 
 status "VERIFYING GPU"
 python - <<'PYCODE'

@@ -670,11 +670,21 @@ def instance_alive(instance_id: int) -> bool | None:
 def destroy_verified(instance_id: int, attempts: int = 3) -> bool:
     """Destroy and CONFIRM it is gone. `vastai destroy` can return success
     while the instance lingers, which is how a box keeps billing after the
-    controller thinks it is finished."""
+    controller thinks it is finished. Every step is logged: a silent failure
+    here costs real money, so nothing is allowed to be swallowed."""
     for attempt in range(1, attempts + 1):
-        run(["vastai", "destroy", "instance", str(instance_id)], check=False)
+        try:
+            p = run(["vastai", "destroy", "instance", str(instance_id)], check=False)
+            out = ((p.stdout or "") + (p.stderr or "")).strip().replace("\n", " ")
+            log("DESTROY_CMD", f"attempt {attempt}: rc={p.returncode} {out[:160]}")
+        except Exception as e:
+            log("DESTROY_CMD_ERROR", f"attempt {attempt}: {e}")
         time.sleep(4)
-        alive = instance_alive(instance_id)
+        try:
+            alive = instance_alive(instance_id)
+        except Exception as e:
+            log("DESTROY_CHECK_ERROR", str(e))
+            alive = None
         if alive is False:
             return True
         if alive is None:
@@ -682,7 +692,10 @@ def destroy_verified(instance_id: int, attempts: int = 3) -> bool:
         else:
             log("DESTROY_RETRY", f"instance {instance_id} still listed (attempt {attempt})")
         time.sleep(4)
-    return instance_alive(instance_id) is False
+    try:
+        return instance_alive(instance_id) is False
+    except Exception:
+        return False
 
 
 def active_instance_ids() -> set[int] | None:
@@ -794,6 +807,9 @@ def main() -> None:
     ap.add_argument("--top", type=int, default=20)
     ap.add_argument("--yes", action="store_true")
     ap.add_argument("--resume", metavar="RUN", help="Resume tracking one active run by script/run/session name")
+    ap.add_argument("--destroy", metavar="NAME|ID",
+                    help="Destroy an instance (campaign name or raw id), verify it is "
+                         "gone, and clear local tracking.")
     ap.add_argument("--resume-all", action="store_true", help="Restore tracking for every .vast/active run")
     ap.add_argument("--_track-state", help=argparse.SUPPRESS)
     args = ap.parse_args()
@@ -807,6 +823,32 @@ def main() -> None:
         raise SystemExit(controller(Path(args._track_state).resolve()))
     if args.resume_all:
         resume_all(root)
+        return
+    if args.destroy:
+        # Manual cleanup: destroy an instance (by campaign name or raw id) and
+        # clear any local tracking for it. For when a controller died mid-run.
+        target = args.destroy
+        path = None
+        try:
+            iid = int(target)
+        except ValueError:
+            path = resolve_resume_path(root, target)
+            iid = int(load_state(path)["instance_id"])
+        print(f"Destroying instance {iid} ...")
+        okgone = destroy_verified(iid)
+        print("Destroyed and confirmed gone." if okgone else
+              f"COULD NOT CONFIRM destruction of {iid} -- check the web UI; it may still bill.")
+        if path is None:
+            for cand in sorted(active_dir(root).glob("*.json")):
+                try:
+                    st = load_state(cand)
+                except Exception:
+                    continue
+                if int(st.get("instance_id", -1)) == iid:
+                    path = cand
+                    break
+        if path is not None and path.is_file():
+            cleanup_dead_state(root, path, load_state(path))
         return
     if args.resume:
         path = resolve_resume_path(root, args.resume)
