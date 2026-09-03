@@ -486,3 +486,29 @@ per GPU while single-thread score, GHz, VRAM, reliability and PCIe are not.
 `outputs/` and the campaign logs mid-run. It is non-fatal and never destroys
 the instance; the destroy-only-after-successful-sync invariant is unchanged.
 The cadence is persisted in the active-state JSON, so `--resume` keeps it.
+
+
+---
+
+## 11. Boot failures: blacklist + auto-retry (added)
+
+Hosts fail. Two real cases seen: a machine whose container runtime cannot
+start the image at all (`failed to start containers`), and a machine that
+boots but never reaches the campaign.
+
+The controller now:
+
+1. **detects** fatal host errors during the SSH wait by scanning
+   `vastai logs` for known-fatal patterns, instead of waiting out the clock;
+2. **aborts** at `--startup-deadline` (default 1800 s) if the campaign never
+   reaches RUNNING, saving `instance_boot.log` and destroying the box;
+3. **blacklists the MACHINE** (not the offer) in `.vast/blacklist.json` --
+   a broken host fails identically on every offer it lists;
+4. **re-rents automatically**: `--auto-retry N` (default 2) picks the
+   *cheapest tier-A box under `--max-price-per-gpu`* (default $0.70/GPU/h),
+   falling back to B then C, always skipping blacklisted machines. If no
+   eligible offer exists, the campaign fails cleanly.
+
+`--min-cuda` filters hosts whose driver is older than the image needs; a
+CUDA 13.x image on an older host is a plausible cause of container-start
+failures, so match it to your image (e.g. `--min-cuda 13.0`).

@@ -396,10 +396,10 @@ def unwrap_offers(data:Any):
 def normalize_offer(raw:dict[str,Any]):
     cpu=str(raw.get("cpu_name") or "unknown");gpu=str(raw.get("gpu_name") or "?")
     tier,score,pct,matched=cpu_info(cpu)
-    return {"id":raw.get("id") or raw.get("ask_contract_id"),"gpu":gpu,
+    return {"id":raw.get("id") or raw.get("ask_contract_id"),"machine_id":raw.get("machine_id"),"cuda_vers":fnum(raw.get("cuda_vers")),"gpu":gpu,
             "num_gpus":max(1,int(fnum(raw.get("num_gpus"),1))),"gpu_score":GPU_SCORE.get(gpu,0),"cpu":cpu,"cpu_match":matched,"tier":tier,"st_score":score,"st_pct":pct,"ghz":fnum(raw.get("cpu_ghz")),"vcpus":fnum(raw.get("cpu_cores_effective")),"price":fnum(raw.get("dph_total",raw.get("dph")),9999),"dph_base":fnum(raw.get("dph_base",raw.get("dph"))),"storage_cost":fnum(raw.get("storage_cost")),"min_bid":fnum(raw.get("min_bid")),"rel":fnum(raw.get("reliability")),"pcie":raw.get("pci_gen",raw.get("pcie_gen","?")),"pcie_bw":fnum(raw.get("pcie_bw")),"inet_down":fnum(raw.get("inet_down")),"disk":fnum(raw.get("disk_space")),"duration":fnum(raw.get("duration")),"loc":raw.get("geolocation",raw.get("location","?"))}
 
-def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min_disk=25,min_duration=1.0,allowed_tiers=None,limit=100,exact_gpus=1,min_gpus=1,max_gpus=None,min_cpus_per_gpu=None,max_price_per_gpu=None):
+def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min_disk=25,min_duration=1.0,allowed_tiers=None,limit=100,exact_gpus=1,min_gpus=1,max_gpus=None,min_cpus_per_gpu=None,max_price_per_gpu=None,min_cuda=None,blacklist=None):
     gpus=gpus or ["RTX 4090","RTX 5090"];gpu_list=", ".join(json.dumps(g) for g in gpus)
     n_clause=(f"num_gpus={exact_gpus}" if exact_gpus is not None else
              f"num_gpus>={max(1,min_gpus)}" + (f" num_gpus<={max_gpus}" if max_gpus else ""))
@@ -438,6 +438,11 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
         row["disk_per_gpu"]=row["disk"]/n
         row["inet_down_per_gpu"]=row.get("inet_down",0.0)/n
         if min_cpus_per_gpu is not None and row["vcpus_per_gpu"]<min_cpus_per_gpu:continue
+        # A host whose driver is older than the image's CUDA cannot start the
+        # container at all ("nvidia-container-cli: initialization error" or a
+        # shim failure). Filter it out rather than discover it at boot.
+        if min_cuda is not None and row.get("cuda_vers") and row["cuda_vers"]<min_cuda:continue
+        if blacklist and row.get("machine_id") in blacklist:continue
         if max_price_per_gpu is not None and row["price_per_gpu"]>max_price_per_gpu:continue
         rows.append(row)
     rows.sort(key=lambda r:(-(r["st_score"] or 0),-r["gpu_score"],r["price_per_gpu"],
@@ -460,9 +465,9 @@ def print_candidate(r,index=None,total=None):
 
 def print_table(rows):
     if not rows:print("No matching offers.");return
-    headers=["#","tier","ST%","offer","N","gpu","cpu","CPU/G","$/G/h","$tot/h","rel","PCIe","loc"]
+    headers=["#","tier","ST%","offer","machine","cuda","N","gpu","cpu","CPU/G","$/G/h","$tot/h","rel","loc"]
     out=[]
-    for i,r in enumerate(rows,1):out.append([str(i),r["tier"],f'{r["st_pct"]:.1f}' if r["st_pct"] is not None else "?",str(r["id"]),str(r["num_gpus"]),r["gpu"],r["cpu"],f'{r["vcpus_per_gpu"]:.1f}',f'{r["price_per_gpu"]:.3f}',f'{r["price"]:.3f}',f'{r["rel"]:.4f}',str(r["pcie"]),str(r["loc"])])
+    for i,r in enumerate(rows,1):out.append([str(i),r["tier"],f'{r["st_pct"]:.1f}' if r["st_pct"] is not None else "?",str(r["id"]),str(r.get("machine_id","?")),f'{r.get("cuda_vers",0):.1f}',str(r["num_gpus"]),r["gpu"],r["cpu"],f'{r["vcpus_per_gpu"]:.1f}',f'{r["price_per_gpu"]:.3f}',f'{r["price"]:.3f}',f'{r["rel"]:.4f}',str(r["loc"])])
     widths=[max(len(headers[i]),*(len(row[i]) for row in out)) for i in range(len(headers))]
     print("A >=95%; B 90-95%; C 85-90%; D 80-85%; E 70-80% of Ryzen 9 9950X PassMark single-thread")
     print("Per-GPU columns assume ONE independent experiment per GPU. ST%, reliability, VRAM and PCIe are NOT divided.\n")
@@ -475,6 +480,7 @@ def main():
     ap.add_argument("--single",action="store_true",help="Only 1-GPU boxes (shorthand for --gpus 1).")
     ap.add_argument("--min-gpus",type=int,default=1);ap.add_argument("--max-gpus",type=int)
     ap.add_argument("--min-cpus-per-gpu",type=float,default=8.0,help="CPU QUANTITY floor per GPU; tiers cover CPU QUALITY.")
+    ap.add_argument("--min-cuda",type=float,default=None,help="Minimum host CUDA version (match your image).")
     ap.add_argument("--max-price-per-gpu",type=float)
 
     args=ap.parse_args()
@@ -488,5 +494,6 @@ def main():
                               min_duration=args.min_duration,allowed_tiers=tiers,limit=args.limit,
                               exact_gpus=exact,min_gpus=args.min_gpus,max_gpus=args.max_gpus,
                               min_cpus_per_gpu=args.min_cpus_per_gpu,
-                              max_price_per_gpu=args.max_price_per_gpu)[:args.top])
+                              max_price_per_gpu=args.max_price_per_gpu,
+                              min_cuda=args.min_cuda)[:args.top])
 if __name__=="__main__":main()

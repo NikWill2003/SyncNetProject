@@ -75,6 +75,15 @@ if ! python -m pip install -q -r requirements.txt; then
 fi
 status "INSTALLED $(python -m pip --version 2>&1 | head -c 60)"
 
+# The image may or may not ship torch. If it does, use it (its CUDA build is
+# matched to the host); if not, install the cu128 wheel, which covers both
+# 40- and 50-series. This makes the image choice non-critical.
+if ! python -c "import torch" 2>/dev/null; then
+  status "TORCH missing in image; installing cu128 wheel"
+  python -m pip install -q torch --index-url https://download.pytorch.org/whl/cu128 \
+    || status "WARNING torch install failed"
+fi
+
 status "VERIFYING GPU"
 python - <<'PYCODE'
 import os

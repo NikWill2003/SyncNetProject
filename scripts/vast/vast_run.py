@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import shutil
+from types import SimpleNamespace
 import subprocess
 import sys
 import tempfile
@@ -19,7 +20,7 @@ from typing import Any
 from vast_find import lookup_offer, print_candidate, print_table, search_offers
 from vast_sync_outputs import sync_instance
 
-DEFAULT_IMAGE = "vastai/base-image:cuda-13.2-mini-py312-2026-08-26"
+DEFAULT_IMAGE = "vastai/pytorch:cuda-12.8.1-auto"
 DEFAULT_REPO = "https://github.com/NikWill2003/SyncNetProject.git"
 DEFAULT_BRANCH = "main"
 REMOTE_WORKDIR = "/workspace/SyncNetProject"
@@ -328,6 +329,33 @@ def get_ssh_direct(instance_id: int) -> tuple[str, str, int] | None:
     return "root", str(host).strip(), int(port)
 
 
+# Host-side failures that no amount of waiting will fix. Seen in the wild:
+# containerd cannot start the container at all, so SSH never appears.
+FATAL_BOOT_PATTERNS = (
+    "failed to start containers",
+    "failed to create shim task",
+    "failed to retrieve OCI runtime container pid",
+    "no space left on device",
+    "nvidia-container-cli: initialization error",
+)
+
+
+def instance_logs(instance_id: int, tail: int = 200) -> str:
+    p = run(["vastai", "logs", str(instance_id), "--tail", str(tail)], check=False)
+    return (p.stdout or "") + (p.stderr or "") if p.returncode == 0 else ""
+
+
+def fatal_boot_error(instance_id: int) -> str | None:
+    text = instance_logs(instance_id)
+    for pat in FATAL_BOOT_PATTERNS:
+        if pat in text:
+            for line in reversed(text.splitlines()):
+                if pat in line:
+                    return line.strip()[:180]
+            return pat
+    return None
+
+
 def instance_status(instance_id: int) -> str:
     p = run(["vastai", "show", "instance", str(instance_id), "--raw"], check=False)
     if p.returncode != 0:
@@ -366,6 +394,9 @@ def wait_for_ssh(instance_id: int, timeout: int) -> tuple[str, str, int]:
         except Exception as e:
             last = str(e)
         if time.time() >= next_notice:
+            fatal = fatal_boot_error(instance_id)
+            if fatal:
+                raise RuntimeError(f"host cannot start the container: {fatal}")
             log("BOOTING", f"waiting for SSH (instance status: {instance_status(instance_id)}"
                            f"{'; last: ' + last[:90] if last else ''})")
             next_notice = time.time() + 30
@@ -455,14 +486,22 @@ def controller(state_path: Path) -> int:
         user, host, port = wait_for_ssh(instance_id, startup_timeout)
     except Exception as e:
         log("SSH_ERROR", str(e))
-        log("KEEPING", f"active state retained for instance {instance_id}")
-        return 1
+        return abort_instance(root, state_path, instance_id, session, run_script,
+                              offer, started,
+                              f"SSH never came up within {startup_timeout}s",
+                              keep=bool(state.get("keep")))
 
     log("SSH_READY", f"ssh -p {port} {user}@{host}")
     ensure_monitor_windows(session, user, host, port)
 
     next_line = 1
     poll_errors = 0
+    # Watchdog: the campaign must reach RUNNING (worker wrote /workspace/READY)
+    # within this window, or the box is destroyed. Covers a wedged clone, a pip
+    # install that hangs, a host that boots but never runs anything.
+    startup_deadline = int(state.get("startup_deadline", 1800))
+    boot_start = time.time()
+    ever_running = False
     result: str | None = None
     cancelled = False
     while result is None:
@@ -473,9 +512,19 @@ def controller(state_path: Path) -> int:
                 print(f"[remote] {line}", flush=True)
             next_line += len(lines)
             current = remote_state(user, host, port)
+            if current in {"SUCCESS", "FAILED", "RUNNING"}:
+                ever_running = True
             if current in {"SUCCESS", "FAILED"}:
                 result = current
                 break
+            if (not ever_running and startup_deadline
+                    and time.time() - boot_start > startup_deadline):
+                return abort_instance(
+                    root, state_path, instance_id, session, run_script, offer,
+                    started,
+                    f"campaign never started within {startup_deadline}s "
+                    f"(last remote state: {current})",
+                    keep=bool(state.get("keep")))
             # Mid-campaign sync: a long campaign should not risk losing every
             # finished run if the instance dies. Never fatal, never destroys.
             if sync_every and time.time() >= next_sync:
@@ -671,7 +720,18 @@ def create_instance(args, offer, root: Path, github: str, wandb: str, repo: str,
         "poll": args.poll,
         "startup_timeout": args.startup_timeout,
         "sync_every": args.sync_every,
+        "startup_deadline": args.startup_deadline,
         "keep": bool(args.keep),
+        # everything the controller needs to rent a REPLACEMENT box by itself
+        "relaunch": {
+            "retries_left": int(args.auto_retry),
+            "max_ppg": float(args.max_price_per_gpu),
+            "image": image, "disk": int(args.disk),
+            "num_gpus": args.num_gpus, "min_cpus_per_gpu": args.min_cpus_per_gpu,
+            "min_cuda": args.min_cuda, "repo": repo, "branch": branch,
+            "gpu": list(args.gpu) or None, "min_reliability": args.min_reliability,
+            "min_duration": args.min_duration,
+        },
         "history_logged": False,
         "sync_complete": False,
     })
@@ -783,6 +843,159 @@ def active_instance_ids() -> set[int] | None:
     return ids
 
 
+def blacklist_path(root: Path) -> Path:
+    return root / ".vast" / "blacklist.json"
+
+
+def load_blacklist(root: Path) -> dict:
+    p = blacklist_path(root)
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return {}
+
+
+def blacklist_machine(root: Path, offer: dict, reason: str) -> None:
+    """Remember hosts that failed to start. A machine whose container runtime
+    is broken will fail the same way on every offer it lists, so blacklisting
+    the MACHINE (not the offer) is what actually helps."""
+    mid = offer.get("machine_id")
+    if mid is None:
+        return
+    bl = load_blacklist(root)
+    entry = bl.get(str(mid), {"failures": 0})
+    entry["failures"] = entry.get("failures", 0) + 1
+    entry["last_reason"] = reason[:200]
+    entry["last_seen"] = time.strftime("%Y-%m-%d %H:%M")
+    bl[str(mid)] = entry
+    p = blacklist_path(root)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(bl, indent=1, sort_keys=True))
+    log("BLACKLISTED", f"machine {mid} ({entry['failures']}x): {reason[:80]}")
+
+
+def blacklisted_machines(root: Path, min_failures: int = 1) -> set:
+    out = set()
+    for mid, e in load_blacklist(root).items():
+        if e.get("failures", 0) >= min_failures:
+            try:
+                out.add(int(mid))
+            except ValueError:
+                out.add(mid)
+    return out
+
+
+def pick_offer_ladder(root: Path, base_kwargs: dict, max_ppg: float,
+                      ladder=("A", "B", "C")) -> dict | None:
+    """Cheapest box in the best tier available: try A within the price cap,
+    then B, then C. Blacklisted machines are excluded at every step."""
+    bl = blacklisted_machines(root)
+    for tier in ladder:
+        rows = search_offers(**base_kwargs, allowed_tiers={tier},
+                             max_price_per_gpu=max_ppg, blacklist=bl)
+        if rows:
+            rows.sort(key=lambda r: (r["price_per_gpu"], -(r["st_score"] or 0)))
+            pick = rows[0]
+            log("AUTO_PICK", f"tier {tier}: offer {pick['id']} machine "
+                             f"{pick.get('machine_id')} "
+                             f"${pick['price_per_gpu']:.3f}/GPU/h "
+                             f"{pick['num_gpus']}x {pick['gpu']}")
+            return pick
+        log("AUTO_PICK", f"no tier-{tier} offer under ${max_ppg:.2f}/GPU/h")
+    return None
+
+
+def relaunch_after_abort(root: Path, state_path: Path, state: dict,
+                         github: str, wandb_key: str) -> int | None:
+    """After an aborted boot, rent a replacement: cheapest A-tier under the
+    price cap, else B, else C, never a blacklisted machine. Returns the new
+    instance id, or None if no retries remain / nothing suitable exists."""
+    rl = dict(state.get("relaunch") or {})
+    if int(rl.get("retries_left", 0)) <= 0:
+        return None
+    base = dict(gpus=rl.get("gpu"), min_reliability=rl.get("min_reliability", 0.99),
+                min_cpus=0, min_disk=rl.get("disk", 25),
+                min_duration=rl.get("min_duration", 1.0), limit=1000,
+                exact_gpus=(rl.get("num_gpus") or None),
+                min_cpus_per_gpu=rl.get("min_cpus_per_gpu", 8.0),
+                min_cuda=rl.get("min_cuda"))
+    offer = pick_offer_ladder(root, base, float(rl.get("max_ppg", 0.70)))
+    if offer is None:
+        log("RETRY_FAILED", "no eligible A/B/C offer under the price cap")
+        return None
+    rl["retries_left"] = int(rl["retries_left"]) - 1
+    ns = SimpleNamespace(run_script=state["run_script"], disk=rl.get("disk", 25),
+                         num_gpus=rl.get("num_gpus"), poll=int(state.get("poll", 5)),
+                         startup_timeout=int(state.get("startup_timeout", 600)),
+                         sync_every=int(state.get("sync_every", 3600)),
+                         startup_deadline=int(state.get("startup_deadline", 1800)),
+                         keep=bool(state.get("keep")), auto_retry=rl["retries_left"],
+                         max_price_per_gpu=rl.get("max_ppg", 0.70),
+                         min_cpus_per_gpu=rl.get("min_cpus_per_gpu", 8.0),
+                         min_cuda=rl.get("min_cuda"), gpu=rl.get("gpu") or [],
+                         min_reliability=rl.get("min_reliability", 0.99),
+                         min_duration=rl.get("min_duration", 1.0))
+    iid, _ = create_instance(ns, offer, root, github, wandb_key,
+                             rl.get("repo"), rl.get("branch"), rl.get("image"))
+    log("RELAUNCHED", f"instance {iid} (retries left: {rl['retries_left']})")
+    return iid
+
+
+def abort_instance(root: Path, state_path: Path, instance_id: int, session: str,
+                   run_script: str, offer: dict, started: float, reason: str,
+                   keep: bool = False) -> int:
+    """Give up on a booting instance: pull whatever diagnostics exist, destroy
+    it, and clear local tracking. An instance that never starts still bills."""
+    log("ABORTING", reason)
+    blacklist_machine(root, offer, reason)
+    try:
+        sync_instance(instance_id, root, run_name(run_script))
+        log("SYNCED", "diagnostics pulled before abort")
+    except Exception as e:
+        log("SYNC_SKIPPED", f"{e}")
+    # The host-side boot log lives on Vast, not on the instance filesystem, so
+    # a failed container start leaves nothing to rsync. Save it separately.
+    try:
+        text = instance_logs(instance_id, tail=400)
+        if text.strip():
+            d = root / ".vast" / "remote_logs" / run_name(run_script) / str(instance_id)
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "instance_boot.log").write_text(text)
+            log("SAVED", f"instance boot log -> {d / 'instance_boot.log'}")
+    except Exception as e:
+        log("LOGS_SKIPPED", f"{e}")
+    if keep:
+        log("KEEPING", f"instance {instance_id} retained (--keep)")
+        return 1
+    if destroy_verified(instance_id):
+        log("DESTROYED", f"instance {instance_id} confirmed gone")
+    else:
+        log("DESTROY_ERR", f"could NOT confirm destruction of {instance_id} -- "
+                           f"check the web UI; it may still bill")
+    try:
+        st = load_state(state_path)
+    except Exception:
+        st = {"instance_id": instance_id, "session": session, "run_script": run_script}
+    if not st.get("history_logged"):
+        append_history(root, "aborted", run_script, offer, instance_id,
+                       time.time() - started)
+    st["history_logged"] = True
+    # Try a replacement box before giving up entirely.
+    try:
+        github = os.environ.get("GITHUB_TOKEN", "")
+        wandb_key = os.environ.get("WANDB_API_KEY", "")
+        if github and wandb_key:
+            new_id = relaunch_after_abort(root, state_path, st, github, wandb_key)
+            if new_id:
+                return 0   # a fresh controller now tracks the replacement
+    except Exception as e:
+        log("RETRY_ERROR", str(e))
+    cleanup_dead_state(root, state_path, st)
+    return 1
+
+
 def destroy_campaign(root: Path, name: str, force: bool = False, skip_sync: bool = False) -> int:
     """Tear a campaign down properly: pull results, destroy the instance, then
     remove the local tracking state and tmux session. Refuses to destroy if
@@ -892,6 +1105,17 @@ def main() -> None:
                     help="With --destroy: destroy even if the sync fails.")
     ap.add_argument("--no-sync", action="store_true",
                     help="With --destroy: skip the sync entirely (results are lost).")
+    ap.add_argument("--auto-retry", type=int, default=2,
+                    help="On a failed boot: blacklist the machine and rent a "
+                         "replacement, up to this many times (0 disables).")
+    ap.add_argument("--max-price-per-gpu", type=float, default=0.70,
+                    help="Price cap used when auto-picking a replacement box.")
+    ap.add_argument("--min-cuda", type=float, default=None,
+                    help="Minimum host CUDA version; match your image (e.g. 13.0).")
+    ap.add_argument("--startup-deadline", type=int, default=1800,
+                    help="Destroy the instance if the campaign has not started "
+                         "within this many seconds (default 1800 = 30 min; "
+                         "0 disables). --keep overrides the destroy.")
     ap.add_argument("--sync-every", type=int, default=3600,
                     help="Seconds between mid-campaign output syncs (0 disables).")
     ap.add_argument("--startup-timeout", type=int, default=600)
