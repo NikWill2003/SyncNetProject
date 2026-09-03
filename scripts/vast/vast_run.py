@@ -701,8 +701,13 @@ def cleanup_dead_state(root: Path, path: Path, state: dict) -> None:
     kill the tmux session, log one history line, remove the active state."""
     iid = int(state["instance_id"])
     session = state.get("session")
-    if session:
-        subprocess.run(["tmux", "kill-session", "-t", session], capture_output=True)
+    if session and shutil.which("tmux"):
+        # never let a missing/misbehaving tmux abort the cleanup: the state
+        # file removal below is the part that matters.
+        try:
+            subprocess.run(["tmux", "kill-session", "-t", session], capture_output=True)
+        except Exception as e:
+            print(f"(could not kill tmux session {session}: {e})")
     if not state.get("history_logged"):
         append_history(root, "vanished", state.get("run_script", "?"),
                        state.get("offer", {}), iid,
@@ -778,6 +783,42 @@ def active_instance_ids() -> set[int] | None:
     return ids
 
 
+def destroy_campaign(root: Path, name: str, force: bool = False, skip_sync: bool = False) -> int:
+    """Tear a campaign down properly: pull results, destroy the instance, then
+    remove the local tracking state and tmux session. Refuses to destroy if
+    the sync fails (use --force to override) so results are never lost."""
+    path = resolve_resume_path(root, name)
+    state = load_state(path)
+    iid = int(state["instance_id"])
+    run_script = state.get("run_script", name)
+
+    alive = instance_alive(iid)
+    if alive is False:
+        print(f"Instance {iid} is already gone on Vast.")
+        cleanup_dead_state(root, path, state)
+        return 0
+
+    if not skip_sync:
+        try:
+            sync_instance(iid, root, run_name(run_script))
+            print(f"Synced outputs + logs for {run_script}.")
+        except Exception as e:
+            print(f"SYNC FAILED: {e}")
+            if not force:
+                print("Refusing to destroy -- results would be lost. "
+                      "Re-run with --force to destroy anyway, or fix the sync first.")
+                return 1
+            print("--force given: destroying despite the failed sync.")
+
+    if not destroy_verified(iid):
+        print(f"Could NOT confirm destruction of {iid}; it may still be billing. "
+              f"Check: vastai show instances")
+        return 1
+    print(f"Instance {iid} destroyed and confirmed gone.")
+    cleanup_dead_state(root, path, state)
+    return 0
+
+
 def resume_all(root: Path) -> None:
     paths = sorted(active_dir(root).glob("*.json"))
     if not paths:
@@ -845,6 +886,13 @@ def main() -> None:
                     help="Rent a box with exactly this many GPUs; the campaign "
                          "runs one independent experiment per GPU from a shared queue.")
     ap.add_argument("--min-cpus-per-gpu", type=float, default=8.0)
+    ap.add_argument("--destroy", metavar="CAMPAIGN",
+                    help="Sync results, destroy the instance, and remove local "
+                         "tracking state + tmux session for this campaign.")
+    ap.add_argument("--force", action="store_true",
+                    help="With --destroy: destroy even if the sync fails.")
+    ap.add_argument("--no-sync", action="store_true",
+                    help="With --destroy: skip the sync entirely (results are lost).")
     ap.add_argument("--sync-every", type=int, default=3600,
                     help="Seconds between mid-campaign output syncs (0 disables).")
     ap.add_argument("--startup-timeout", type=int, default=600)
@@ -904,6 +952,9 @@ def main() -> None:
         if path is not None and path.is_file():
             cleanup_dead_state(root, path, load_state(path))
         return
+    if args.destroy:
+        raise SystemExit(destroy_campaign(root, args.destroy,
+                                          force=args.force, skip_sync=args.no_sync))
     if args.resume:
         path = resolve_resume_path(root, args.resume)
         state = load_state(path)
