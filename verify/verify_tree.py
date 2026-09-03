@@ -11,10 +11,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'bash_scripts/run_sqoop_rhs35_cnn_stem',
+    'conf/experiment/sqoop/matched/shared_workspace_cnnenc.yaml',
+    'conf/experiment/sqoop/matched/transformer_cnnenc.yaml',
+    'bash_scripts/run_sqoop_rhs18_baseline_rescue',
+    'bash_scripts/run_sqoop_rhs18_bestofboth_seeds',
+    'bash_scripts/run_sqoop_rhs35_bestofboth',
+    'bash_scripts/run_sqoop_rhs08_bestofboth',
+    'bash_scripts/run_sqoop_rhs04_bestofboth',
+    'bash_scripts/run_sqoop_rhs02_bestofboth',
+    'bash_scripts/run_sqoop_rhs01_bestofboth',
     'bash_scripts/run_sqoop_interventions',
     'conf/experiment/sort_of_clevr/sync/hybrids/identity_partition_cnnenc.yaml',
     'bash_scripts/run_soc_unify',
-    'bash_scripts/run_sqoop_curve_bestofboth',
     # --- campaigns, tooling and hybrid cells (added during the v16 campaign) ---
     'bash_scripts/_campaign_lib.sh',
     'bash_scripts/vast_worker',

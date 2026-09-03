@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_bestofboth_seeds
+# DATASET: SQOOP rhs=18
+# 2 runs, ~3 GPU-h on one GPU.
+# WHY: seeds 3-4 of the .999 model, bringing rhs=18 to 5 seeds
+#     local  : bash bash_scripts/run_sqoop_rhs18_bestofboth_seeds
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_bestofboth_seeds
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=18"
+
+RUNS=(
+  "sq18_id_partition_cnn_s3     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=18 train.seed=3 wandb.tags=[v16,bestofboth]"
+  "sq18_id_partition_cnn_s4     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=18 train.seed=4 wandb.tags=[v16,bestofboth]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

@@ -1,0 +1,12 @@
+# @package _global_
+# shared_workspace on the paper 6-layer conv stem instead of a single patchify conv. The
+# deep stem was the lever that took the bus model from .55 to .999 on sqoop;
+# the token baselines currently sit at .500 with a one-layer stride-8 stem.
+defaults:
+  - /experiment/sqoop/matched/_family
+  - override /model: sqoop/shared_workspace
+  - _self_
+model:
+  encoder:
+    name: cnn
+    ch: 64

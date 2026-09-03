@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs35_cnn_stem
+# DATASET: SQOOP rhs=35 (the easiest split: every pair is a training pair)
+# 24 runs, ~31 GPU-h.
+# WHY: one box, every baseline-rescue idea at the easiest split. (1) The 6-layer
+# cnn stem on the token baselines that
+# sit at .500 (transformer, shared_workspace), with gated_cnnenc alongside as
+# the model already known to train on it. If the stem alone lifts them here,
+# the rhs=18 rescue sweep is worth running in full; if they stay at .500 on the
+# easiest split, the stem is not their problem. (2) relnet with less pooling before
+# pairing: it currently max-pools 16x16 -> 5x5 (12.8 px cells vs 10-15 px glyphs), so
+# two glyphs can share a cell; 8x8 and full 16x16 grids are tried, plus avg pooling
+# and the optimisation knobs, against the 5x5 control.
+#     local  : bash bash_scripts/run_sqoop_rhs35_cnn_stem
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs35_cnn_stem
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=35"
+
+RUNS=(
+  "sq35_transformer_cnn_s0    task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_transformer_cnn_s1    task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_transformer_cnn_s2    task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 train.seed=2 wandb.tags=[v16,rescue]"
+  "sq35_workspace_cnn_s0      task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc dataset.rhs_variety=35 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_workspace_cnn_s1      task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc dataset.rhs_variety=35 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_workspace_cnn_s2      task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc dataset.rhs_variety=35 train.seed=2 wandb.tags=[v16,rescue]"
+  "sq35_gated_cnn_s0          task=sqoop experiment=sqoop/matched/gated_cnnenc dataset.rhs_variety=35 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_gated_cnn_s1          task=sqoop experiment=sqoop/matched/gated_cnnenc dataset.rhs_variety=35 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_gated_cnn_s2          task=sqoop experiment=sqoop/matched/gated_cnnenc dataset.rhs_variety=35 train.seed=2 wandb.tags=[v16,rescue]"
+  # ---- second config: the SNR lever (effective batch 2048) + two transformer knobs ----
+  "sq35_transformer_cnn_eb2048_s0 task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 train.grad_accum=8 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_transformer_cnn_eb2048_s1 task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 train.grad_accum=8 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_workspace_cnn_eb2048_s0   task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc dataset.rhs_variety=35 train.grad_accum=8 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_workspace_cnn_eb2048_s1   task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc dataset.rhs_variety=35 train.grad_accum=8 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_transformer_cnn_token_s0  task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 model.q_conditioning=token train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_transformer_cnn_lr1e4_s0  task=sqoop experiment=sqoop/matched/transformer_cnnenc dataset.rhs_variety=35 optim.lr=1e-4 train.seed=0 wandb.tags=[v16,rescue]"
+  # ---- relnet: keep more resolution before pairing (5x5 control -> 8x8 -> 16x16) ----
+  "sq35_relnet_ps8_s0             task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=8 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps8_s1             task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=8 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps8_s2             task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=8 train.seed=2 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps8avg_s0          task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=8 model.pair_pool=avg train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps16_s0            task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=16 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps16_s1            task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=16 train.seed=1 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps8_lr1e4_s0       task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=8 optim.lr=1e-4 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps8_eb2048_s0      task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 model.pair_spatial=8 train.grad_accum=8 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq35_relnet_ps5_s0             task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=35 train.seed=0 wandb.tags=[v16,rescue]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

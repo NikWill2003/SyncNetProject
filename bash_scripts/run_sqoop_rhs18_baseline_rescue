@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_baseline_rescue
+# DATASET: SQOOP rhs=18
+# 13 runs, ~16 GPU-h.
+# WHY: transformer and shared_workspace sit at exactly .500 on sqoop. Both use a
+# ONE-layer stride-8 patchify stem, while every other model (and the paper) uses
+# a 6-layer conv stem -- and the deep stem is exactly what took the bus model
+# from .55 to .999. This gives them the stem, then sweeps the optimisation knobs
+# the SNR diagnosis pointed at (effective batch, LR, warmup) plus dropout and
+# question-as-token. A baseline that stays at .500 after this is defensibly
+# reported as failing; one that trains changes the comparison table.
+#     local  : bash bash_scripts/run_sqoop_rhs18_baseline_rescue
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_baseline_rescue
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop"
+
+RUNS=(
+  "sq_transformer_cnn_s0          task=sqoop experiment=sqoop/matched/transformer_cnnenc train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_s1          task=sqoop experiment=sqoop/matched/transformer_cnnenc train.seed=1 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_s2          task=sqoop experiment=sqoop/matched/transformer_cnnenc train.seed=2 wandb.tags=[v16,rescue]"
+  "sq_workspace_cnn_s0            task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_workspace_cnn_s1            task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc train.seed=1 wandb.tags=[v16,rescue]"
+  "sq_workspace_cnn_s2            task=sqoop experiment=sqoop/matched/shared_workspace_cnnenc train.seed=2 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_eb2048_s0   task=sqoop experiment=sqoop/matched/transformer_cnnenc train.grad_accum=8 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_lr1e4_s0    task=sqoop experiment=sqoop/matched/transformer_cnnenc optim.lr=1e-4 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_warm10k_s0  task=sqoop experiment=sqoop/matched/transformer_cnnenc optim.lr_scheduler_params.warmup_steps=10000 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_drop_s0     task=sqoop experiment=sqoop/matched/transformer_cnnenc model.dropout=0.1 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_transformer_cnn_token_s0    task=sqoop experiment=sqoop/matched/transformer_cnnenc model.q_conditioning=token train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_transformer_eb2048_s0       task=sqoop experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 train.seed=0 wandb.tags=[v16,rescue]"
+  "sq_workspace_eb2048_s0         task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.grad_accum=8 train.seed=0 wandb.tags=[v16,rescue]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
