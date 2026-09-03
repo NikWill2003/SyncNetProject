@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# run_soc_unify
+# DATASET: Sort-of-CLEVR
+# 4 runs.
+# WHY: does the SQOOP recipe (partition-initialised prior + cnn stem) also hold on SoC, where the learned prior + field stem assembles 5/6? If yes, ONE configuration serves both tasks
+#     local  : bash bash_scripts/run_soc_unify
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_soc_unify
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  "soc_id_partition_cnn_s0        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition_cnnenc train.seed=0 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_cnn_s1        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition_cnnenc train.seed=1 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_cnn_s2        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition_cnnenc train.seed=2 wandb.tags=[v16,bestofboth]"
+  "soc_id_partition_cnn_s3        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_partition_cnnenc train.seed=3 wandb.tags=[v16,bestofboth]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

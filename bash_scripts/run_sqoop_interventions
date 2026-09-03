@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# run_sqoop_interventions
+# DATASET: SQOOP rhs=18
+# 6 training runs (~9 GPU-h) + the post-hoc intervention suite on every
+# checkpoint this box produces, written to outputs/interventions/ so the
+# normal sync brings it home.
+# WHY: the .999 SQOOP result is only a synchrony result if phase is
+# LOAD-BEARING there. SQOOP has no intervention callback (it is SoC-scoped),
+# so this campaign trains the winner and the gated model side by side, then
+# runs freeze / zero / shuffle / anchor_shuffle and gate open / zero on each
+# saved best_model.pt. Read the CSV: drops near SoC's -0.62 mean synchrony
+# carries the routing; drops near 0 mean the partition does.
+#     local  : bash bash_scripts/run_sqoop_interventions
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_interventions
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop"
+
+T="wandb.tags=[v16,interventions]"
+RUNS=(
+  "sq_id_partition_cnn_s0   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc train.seed=0 $T"
+  "sq_id_partition_cnn_s1   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc train.seed=1 $T"
+  "sq_id_partition_cnn_s2   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc train.seed=2 $T"
+  "sq_gated_s0              task=sqoop experiment=sqoop/sync/thesis/gated train.seed=0 $T"
+  "sq_gated_s1              task=sqoop experiment=sqoop/sync/thesis/gated train.seed=1 $T"
+  "sq_gated_cnn_s0          task=sqoop experiment=sqoop/matched/gated_cnnenc train.seed=0 $T"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
+TRAIN_RC=$?
+
+# ---- post-hoc interventions on everything this box just trained ----------
+mkdir -p outputs/interventions
+if python -u scripts/run_interventions.py \
+      --glob 'outputs/sqoop/**/best_model.pt' \
+      --csv outputs/interventions/sqoop_interventions.csv \
+      > "$LOG/_interventions.log" 2>&1
+then
+    echo "ok   _interventions"
+    # echo the table into the status stream so it is readable without the sync
+    grep -E "baseline|drop" "$LOG/_interventions.log" | sed 's/^/    /'
+else
+    echo "FAIL _interventions ($LOG/_interventions.log)"
+    exit 1
+fi
+exit "$TRAIN_RC"

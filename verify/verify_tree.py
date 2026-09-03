@@ -11,6 +11,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'bash_scripts/run_sqoop_interventions',
+    'conf/experiment/sort_of_clevr/sync/hybrids/identity_partition_cnnenc.yaml',
+    'bash_scripts/run_soc_unify',
+    'bash_scripts/run_sqoop_curve_bestofboth',
     # --- campaigns, tooling and hybrid cells (added during the v16 campaign) ---
     'bash_scripts/_campaign_lib.sh',
     'bash_scripts/vast_worker',

@@ -1,0 +1,13 @@
+# @package _global_
+# The SQOOP winner's exact recipe on SoC: partition-initialised spatial prior
+# on the common cnn stem. Does ONE configuration hold on both tasks?
+defaults:
+  - /experiment/sort_of_clevr/sync/hybrids/_family
+  - override /model: sort_of_clevr/identity_busnet
+  - _self_
+model:
+  claim_prior: spatial
+  claim_prior_init: partition
+  encoder:
+    name: cnn
+    ch: 24

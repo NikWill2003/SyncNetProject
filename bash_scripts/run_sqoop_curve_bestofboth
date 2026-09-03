@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# run_sqoop_curve_bestofboth
+# DATASET: SQOOP rhs 1,2,4,8,35 (deliberate multi-dataset script: a curve cannot live on one)
+# 15 runs. ~25 GPU-h; the rhs=1 block comes first because it is the number that matters.
+# WHY: identity_partition_cnnenc reached .999 at rhs=18 -- the first field/bus model to train on SQOOP. This is its compositional curve: 3 seeds at every variety, to set against gated (.821 at rhs=1) and FiLM (.692)
+#     local  : bash bash_scripts/run_sqoop_curve_bestofboth
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_curve_bestofboth
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  "sq1_id_partition_cnn_s0        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s1        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s2        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq2_id_partition_cnn_s0        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=2 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq2_id_partition_cnn_s1        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=2 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq2_id_partition_cnn_s2        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=2 train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq4_id_partition_cnn_s0        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=4 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq4_id_partition_cnn_s1        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=4 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq4_id_partition_cnn_s2        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=4 train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq8_id_partition_cnn_s0        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=8 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq8_id_partition_cnn_s1        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=8 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq8_id_partition_cnn_s2        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=8 train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq35_id_partition_cnn_s0       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=35 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq35_id_partition_cnn_s1       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=35 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq35_id_partition_cnn_s2       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=35 train.seed=2 wandb.tags=[v16,bestofboth]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
