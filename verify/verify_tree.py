@@ -11,6 +11,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'conf/experiment/sort_of_clevr/sync/hybrids/identity_spatial_cnnenc.yaml',
+    'bash_scripts/run_sqoop_rhs01_ablations_canonical',
+    'bash_scripts/run_sqoop_rhs18_ablations_canonical',
+    'bash_scripts/run_soc_sweeps_canonical',
+    'bash_scripts/run_soc_ablations_canonical',
     'bash_scripts/run_sqoop_rhs35_cnn_stem',
     'conf/experiment/sqoop/matched/shared_workspace_cnnenc.yaml',
     'conf/experiment/sqoop/matched/transformer_cnnenc.yaml',

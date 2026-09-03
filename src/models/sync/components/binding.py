@@ -46,6 +46,14 @@ class CompetitiveClaim(nn.Module):
                 region = (ys * rows // S) * cols + (xs * cols // S)
                 for k in range(min(n_slots, rows * cols)):
                     bias[k, region == k] = claim_prior_scale
+            elif claim_prior_init == 'random':
+                # Control for the partition seed: every cell assigned to a random
+                # slot (fixed seed), same bias scale. If THIS trains as well as
+                # the grid, any symmetry-breaking seed suffices.
+                g = torch.Generator().manual_seed(0)
+                region = torch.randint(0, n_slots, (n_cells,), generator=g)
+                for k in range(n_slots):
+                    bias[k, region == k] = claim_prior_scale
             elif claim_prior_init != 'zero':
                 raise ValueError(f"unknown claim_prior_init {claim_prior_init!r}")
             self.cell_bias = nn.Parameter(bias)

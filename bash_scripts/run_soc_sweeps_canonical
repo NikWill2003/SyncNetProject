@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# run_soc_sweeps_canonical
+# DATASET: Sort-of-CLEVR
+# 30 runs, ~30 GPU-h on one GPU.
+# WHY: the three hyperparameter curves around the canonical model: internal steps T, phase dimension d, module count M
+#
+# CANONICAL MODEL = identity bus net + spatial bias on the competition + NO
+# readout prior term (Chapter 3). Every run below is the canonical model with
+# exactly ONE change. If run_soc_readout_prior shows the prior term matters,
+# flip the single CANON line and re-run.
+#     local  : bash bash_scripts/run_soc_sweeps_canonical
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_soc_sweeps_canonical
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+CANON="task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false"
+
+RUNS=(
+  # ---- T sweep (canonical value is in run_soc_ablations_canonical) ----
+  "soc_T2_s0                  $CANON model.t_bus=2 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_T2_s1                  $CANON model.t_bus=2 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_T2_s2                  $CANON model.t_bus=2 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_T4_s0                  $CANON model.t_bus=4 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_T4_s1                  $CANON model.t_bus=4 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_T4_s2                  $CANON model.t_bus=4 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_T16_s0                 $CANON model.t_bus=16 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_T16_s1                 $CANON model.t_bus=16 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_T16_s2                 $CANON model.t_bus=16 train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- d sweep (canonical value is in run_soc_ablations_canonical) ----
+  "soc_d2_s0                  $CANON model.phase_dim=2 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_d2_s1                  $CANON model.phase_dim=2 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_d2_s2                  $CANON model.phase_dim=2 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_d3_s0                  $CANON model.phase_dim=3 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_d3_s1                  $CANON model.phase_dim=3 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_d3_s2                  $CANON model.phase_dim=3 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_d4_s0                  $CANON model.phase_dim=4 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_d4_s1                  $CANON model.phase_dim=4 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_d4_s2                  $CANON model.phase_dim=4 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_d8_s0                  $CANON model.phase_dim=8 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_d8_s1                  $CANON model.phase_dim=8 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_d8_s2                  $CANON model.phase_dim=8 train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- M sweep (canonical value is in run_soc_ablations_canonical) ----
+  "soc_M4_s0                  $CANON model.n_modules=4 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_M4_s1                  $CANON model.n_modules=4 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_M4_s2                  $CANON model.n_modules=4 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_M8_s0                  $CANON model.n_modules=8 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_M8_s1                  $CANON model.n_modules=8 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_M8_s2                  $CANON model.n_modules=8 train.seed=2 wandb.tags=[v16,canonical]"
+  "soc_M12_s0                 $CANON model.n_modules=12 train.seed=0 wandb.tags=[v16,canonical]"
+  "soc_M12_s1                 $CANON model.n_modules=12 train.seed=1 wandb.tags=[v16,canonical]"
+  "soc_M12_s2                 $CANON model.n_modules=12 train.seed=2 wandb.tags=[v16,canonical]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

@@ -399,7 +399,7 @@ def normalize_offer(raw:dict[str,Any]):
     return {"id":raw.get("id") or raw.get("ask_contract_id"),"machine_id":raw.get("machine_id"),"cuda_vers":fnum(raw.get("cuda_vers")),"verified":raw.get("verified"),"datacenter":raw.get("datacenter"),"gpu":gpu,
             "num_gpus":max(1,int(fnum(raw.get("num_gpus"),1))),"gpu_score":GPU_SCORE.get(gpu,0),"cpu":cpu,"cpu_match":matched,"tier":tier,"st_score":score,"st_pct":pct,"ghz":fnum(raw.get("cpu_ghz")),"vcpus":fnum(raw.get("cpu_cores_effective")),"price":fnum(raw.get("dph_total",raw.get("dph")),9999),"dph_base":fnum(raw.get("dph_base",raw.get("dph"))),"storage_cost":fnum(raw.get("storage_cost")),"min_bid":fnum(raw.get("min_bid")),"rel":fnum(raw.get("reliability")),"pcie":raw.get("pci_gen",raw.get("pcie_gen","?")),"pcie_bw":fnum(raw.get("pcie_bw")),"inet_down":fnum(raw.get("inet_down")),"disk":fnum(raw.get("disk_space")),"duration":fnum(raw.get("duration")),"loc":raw.get("geolocation",raw.get("location","?"))}
 
-def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min_disk=25,min_duration=1.0,allowed_tiers=None,limit=100,exact_gpus=1,min_gpus=1,max_gpus=None,min_cpus_per_gpu=None,max_price_per_gpu=None,min_cuda=None,blacklist=None,verified_only=False):
+def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min_disk=25,min_duration=1.0,allowed_tiers=None,limit=100,exact_gpus=1,min_gpus=1,max_gpus=None,min_cpus_per_gpu=None,max_price_per_gpu=None,min_cuda=None,blacklist=None,verified_only=False,explain=False):
     gpus=gpus or ["RTX 4090","RTX 5090"];gpu_list=", ".join(json.dumps(g) for g in gpus)
     n_clause=(f"num_gpus={exact_gpus}" if exact_gpus is not None else
              f"num_gpus>={max(1,min_gpus)}" + (f" num_gpus<={max_gpus}" if max_gpus else ""))
@@ -430,6 +430,7 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
     for it in items:
         dedup[it.get("id") or it.get("ask_contract_id") or id(it)]=it
     data=list(dedup.values())
+    drops={"tier":0,"cpus_per_gpu":0,"price_per_gpu":0,"cuda":0,"blacklist":0,"verified":0}
     rows=[]
     for item in unwrap_offers(data):
         row=normalize_offer(item)
@@ -444,20 +445,28 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
         row["vcpus_per_gpu"]=row["vcpus"]/n
         row["disk_per_gpu"]=row["disk"]/n
         row["inet_down_per_gpu"]=row.get("inet_down",0.0)/n
-        if min_cpus_per_gpu is not None and row["vcpus_per_gpu"]<min_cpus_per_gpu:continue
+        if min_cpus_per_gpu is not None and row["vcpus_per_gpu"]<min_cpus_per_gpu:drops["cpus_per_gpu"]+=1;continue
         # A host whose driver is older than the image's CUDA cannot start the
         # container at all ("nvidia-container-cli: initialization error" or a
         # shim failure). Filter it out rather than discover it at boot.
         # NB: some vastai builds omit cuda_vers/verified from the payload. Only
         # exclude on a KNOWN-bad value; the query above does the real filtering,
         # otherwise a missing field would silently drop every offer.
-        if min_cuda is not None and row.get("cuda_vers") and row["cuda_vers"]<min_cuda:continue
-        if blacklist and row.get("machine_id") in blacklist:continue
+        if min_cuda is not None and row.get("cuda_vers") and row["cuda_vers"]<min_cuda:drops["cuda"]+=1;continue
+        if blacklist and row.get("machine_id") in blacklist:drops["blacklist"]+=1;continue
         # Vast-verified hosts are datacentre-checked; unverified ones are where
         # most boot failures live, so this is worth having as one flag.
-        if verified_only and row.get("verified") is False:continue
-        if max_price_per_gpu is not None and row["price_per_gpu"]>max_price_per_gpu:continue
+        if verified_only and row.get("verified") is False:drops["verified"]+=1;continue
+        if max_price_per_gpu is not None and row["price_per_gpu"]>max_price_per_gpu:drops["price_per_gpu"]+=1;continue
         rows.append(row)
+    if explain:
+        print(f"EXPLAIN: {len(data)} offers returned by Vast for the query above "
+              f"(server-side filters: on-demand only, direct SSH port, reliability, disk, duration, "
+              f"exact gpu_name -- 'RTX 4090 D'/'5090 D' variants are excluded by design).")
+        print("         dropped locally: " + ", ".join(f"{k}={v}" for k,v in drops.items() if v) + f"; kept {len(rows)}")
+        print("         Web UI differences: it shows interruptible offers, proxy-only hosts, reliability<0.99, "
+              "and does not apply CPU tiers or cores-per-GPU. Loosen with --tiers, --min-cpus-per-gpu, "
+              "--min-reliability, --any-gpus; the rest are deliberate.")
     rows.sort(key=lambda r:(-(r["st_score"] or 0),-r["gpu_score"],r["price_per_gpu"],
                             -r["vcpus_per_gpu"],-r["rel"]))
     return rows
@@ -496,6 +505,7 @@ def main():
     ap.add_argument("--min-cpus-per-gpu",type=float,default=8.0,help="CPU QUANTITY floor per GPU; tiers cover CPU QUALITY.")
     ap.add_argument("--min-cuda",type=float,default=None,help="Minimum host CUDA version (match your image).")
     ap.add_argument("--verified-only",action="store_true",help="Only Vast-verified hosts.")
+    ap.add_argument("--explain",action="store_true",help="Report how many offers each filter removed and why the web UI shows more.")
     ap.add_argument("--max-price-per-gpu",type=float)
 
     args=ap.parse_args()
@@ -510,5 +520,5 @@ def main():
                               exact_gpus=exact,min_gpus=args.min_gpus,max_gpus=args.max_gpus,
                               min_cpus_per_gpu=args.min_cpus_per_gpu,
                               max_price_per_gpu=args.max_price_per_gpu,
-                              min_cuda=args.min_cuda,verified_only=args.verified_only)[:args.top])
+                              min_cuda=args.min_cuda,verified_only=args.verified_only,explain=args.explain)[:args.top])
 if __name__=="__main__":main()

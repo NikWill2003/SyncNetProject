@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs01_ablations_canonical
+# DATASET: SQOOP rhs=1
+# 18 runs, ~22 GPU-h on one GPU.
+# WHY: the mechanism subset at the compositional extreme: which components matter for recombination
+#
+# CANONICAL MODEL = identity bus net + spatial bias on the competition + NO
+# readout prior term (Chapter 3). Every run below is the canonical model with
+# exactly ONE change. If run_soc_readout_prior shows the prior term matters,
+# flip the single CANON line and re-run.
+#     local  : bash bash_scripts/run_sqoop_rhs01_ablations_canonical
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs01_ablations_canonical
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+CANON="task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1"
+
+RUNS=(
+  # ---- the canonical model itself ----
+  "sq1_canonical_s0           $CANON train.seed=0 wandb.tags=[v16,canonical]"
+  "sq1_canonical_s1           $CANON train.seed=1 wandb.tags=[v16,canonical]"
+  "sq1_canonical_s2           $CANON train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- no_bias ----
+  "sq1_no_bias_s0             $CANON model.claim_prior=null train.seed=0 wandb.tags=[v16,canonical]"
+  "sq1_no_bias_s1             $CANON model.claim_prior=null train.seed=1 wandb.tags=[v16,canonical]"
+  "sq1_no_bias_s2             $CANON model.claim_prior=null train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- hard_partition ----
+  "sq1_hard_partition_s0      $CANON model.claim_prior_scale=50 train.seed=0 wandb.tags=[v16,canonical]"
+  "sq1_hard_partition_s1      $CANON model.claim_prior_scale=50 train.seed=1 wandb.tags=[v16,canonical]"
+  "sq1_hard_partition_s2      $CANON model.claim_prior_scale=50 train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- silent ----
+  "sq1_silent_s0              $CANON model.medium=silent train.seed=0 wandb.tags=[v16,canonical]"
+  "sq1_silent_s1              $CANON model.medium=silent train.seed=1 wandb.tags=[v16,canonical]"
+  "sq1_silent_s2              $CANON model.medium=silent train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- static_addr ----
+  "sq1_static_addr_s0         $CANON model.addresses=static train.seed=0 wandb.tags=[v16,canonical]"
+  "sq1_static_addr_s1         $CANON model.addresses=static train.seed=1 wandb.tags=[v16,canonical]"
+  "sq1_static_addr_s2         $CANON model.addresses=static train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- lines_attn ----
+  "sq1_lines_attn_s0          $CANON model.medium=lines model.gate=attn train.seed=0 wandb.tags=[v16,canonical]"
+  "sq1_lines_attn_s1          $CANON model.medium=lines model.gate=attn train.seed=1 wandb.tags=[v16,canonical]"
+  "sq1_lines_attn_s2          $CANON model.medium=lines model.gate=attn train.seed=2 wandb.tags=[v16,canonical]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

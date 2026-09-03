@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# run_sqoop_rhs18_ablations_canonical
+# DATASET: SQOOP rhs=18
+# 24 runs, ~27 GPU-h on one GPU.
+# WHY: the mechanism subset on the in-distribution split, plus the seed-justification block: random-region seed, bias-scale sweep, zero init
+#
+# CANONICAL MODEL = identity bus net + spatial bias on the competition + NO
+# readout prior term (Chapter 3). Every run below is the canonical model with
+# exactly ONE change. If run_soc_readout_prior shows the prior term matters,
+# flip the single CANON line and re-run.
+#     local  : bash bash_scripts/run_sqoop_rhs18_ablations_canonical
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs18_ablations_canonical
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=18"
+
+CANON="task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=18"
+
+RUNS=(
+  # ---- the canonical model itself ----
+  "sq18_canonical_s0          $CANON train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_canonical_s1          $CANON train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_canonical_s2          $CANON train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- no_bias ----
+  "sq18_no_bias_s0            $CANON model.claim_prior=null train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_no_bias_s1            $CANON model.claim_prior=null train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_no_bias_s2            $CANON model.claim_prior=null train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- hard_partition ----
+  "sq18_hard_partition_s0     $CANON model.claim_prior_scale=50 train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_hard_partition_s1     $CANON model.claim_prior_scale=50 train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_hard_partition_s2     $CANON model.claim_prior_scale=50 train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- silent ----
+  "sq18_silent_s0             $CANON model.medium=silent train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_silent_s1             $CANON model.medium=silent train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_silent_s2             $CANON model.medium=silent train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- static_addr ----
+  "sq18_static_addr_s0        $CANON model.addresses=static train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_static_addr_s1        $CANON model.addresses=static train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_static_addr_s2        $CANON model.addresses=static train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- lines_attn ----
+  "sq18_lines_attn_s0         $CANON model.medium=lines model.gate=attn train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_lines_attn_s1         $CANON model.medium=lines model.gate=attn train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_lines_attn_s2         $CANON model.medium=lines model.gate=attn train.seed=2 wandb.tags=[v16,canonical]"
+  # ---- seed justification: is the partition seed special? ----
+  "sq18_seed_random_s0        $CANON model.claim_prior_init=random train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_seed_random_s1        $CANON model.claim_prior_init=random train.seed=1 wandb.tags=[v16,canonical]"
+  "sq18_scale1_s0             $CANON model.claim_prior_scale=1 train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_scale2_s0             $CANON model.claim_prior_scale=2 train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_scale8_s0             $CANON model.claim_prior_scale=8 train.seed=0 wandb.tags=[v16,canonical]"
+  "sq18_seed_zero_s0          $CANON model.claim_prior_init=zero train.seed=0 wandb.tags=[v16,canonical]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
