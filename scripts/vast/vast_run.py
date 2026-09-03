@@ -638,7 +638,7 @@ def create_instance(args, offer, root: Path, github: str, wandb: str, repo: str,
         "REPO_BRANCH": branch,
         "WORKDIR": REMOTE_WORKDIR,
         "RUN_SCRIPT": args.run_script,
-        "NGPU": str(args.num_gpus),
+        "NGPU": (str(args.num_gpus) if args.num_gpus and args.num_gpus > 0 else "auto"),
         "GITHUB_TOKEN": github,
         "WANDB_API_KEY": wandb,
     }
@@ -882,9 +882,11 @@ def main() -> None:
     ap.add_argument("--disk", type=int, default=25,
                     help="Instance disk in GB; also the marketplace floor "
                          "(offers with less available disk are excluded).")
-    ap.add_argument("--num-gpus", type=int, default=1,
-                    help="Rent a box with exactly this many GPUs; the campaign "
-                         "runs one independent experiment per GPU from a shared queue.")
+    ap.add_argument("--num-gpus", type=int, default=None,
+                    help="Rent a box with EXACTLY this many GPUs. Default: any "
+                         "count -- 1/2/4/8-GPU offers are all shown, and the "
+                         "campaign runs one independent experiment per GPU on "
+                         "whatever you pick, from a shared queue.")
     ap.add_argument("--min-cpus-per-gpu", type=float, default=8.0)
     ap.add_argument("--force", action="store_true",
                     help="With --destroy: destroy even if the sync fails.")
