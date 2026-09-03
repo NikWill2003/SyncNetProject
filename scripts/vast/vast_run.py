@@ -244,7 +244,7 @@ def choose_auto(args: argparse.Namespace) -> dict[str, Any]:
         min_reliability=args.min_reliability,
         min_cpus=args.min_cpus,
         min_disk=args.disk,
-        exact_gpus=args.num_gpus,
+        exact_gpus=(None if args.num_gpus in (0, None) else args.num_gpus),
         min_cpus_per_gpu=args.min_cpus_per_gpu,
         min_duration=args.min_duration,
         allowed_tiers=tiers,
@@ -288,7 +288,7 @@ def get_ssh(instance_id: int) -> tuple[str, str, int]:
 
 def ssh_command(user: str, host: str, port: int, remote: str | None = None) -> list[str]:
     cmd = [
-        "ssh", "-tt", "-o", "StrictHostKeyChecking=accept-new", "-o", "ServerAliveInterval=30",
+        "ssh", "-tt", "-q", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=accept-new", "-o", "ServerAliveInterval=30",
         "-p", str(port), f"{user}@{host}",
     ]
     if remote is not None:
@@ -304,7 +304,7 @@ def wait_for_ssh(instance_id: int, timeout: int) -> tuple[str, str, int]:
         try:
             user, host, port = get_ssh(instance_id)
             p = run([
-                "ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=8",
+                "ssh", "-q", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=8",
                 "-p", str(port), f"{user}@{host}", "true",
             ], check=False)
             if p.returncode == 0:
@@ -338,13 +338,13 @@ def remote_state(user: str, host: str, port: int) -> str:
         "elif [ -e /workspace/READY ]; then echo RUNNING; "
         "else echo BOOTSTRAP; fi"
     )
-    p = run(["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port), f"{user}@{host}", cmd], check=False)
+    p = run(["ssh", "-q", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port), f"{user}@{host}", cmd], check=False)
     return p.stdout.strip() if p.returncode == 0 else "DISCONNECTED"
 
 
 def status_lines(user: str, host: str, port: int, start: int) -> list[str]:
     p = run([
-        "ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port), f"{user}@{host}",
+        "ssh", "-q", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port), f"{user}@{host}",
         f"sed -n '{start},$p' /workspace/status.log 2>/dev/null || true",
     ], check=False)
     return p.stdout.splitlines() if p.returncode == 0 else []
@@ -360,7 +360,7 @@ if [ -s /workspace/run.pid ]; then
     kill -KILL -- -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
   fi
 fi'''
-    run(["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port), f"{user}@{host}", cmd], check=False)
+    run(["ssh", "-q", "-o", "LogLevel=ERROR", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port), f"{user}@{host}", cmd], check=False)
 
 
 def print_header(state: dict[str, Any]) -> None:

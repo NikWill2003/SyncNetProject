@@ -28,7 +28,8 @@ def get_ssh(instance_id: int) -> tuple[str, str, int]:
 
 def ssh_base(user: str, host: str, port: int) -> list[str]:
     return [
-        "ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=8",
+        "ssh", "-q", "-o", "LogLevel=ERROR",
+        "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=8",
         "-p", str(port), f"{user}@{host}",
     ]
 
@@ -60,17 +61,21 @@ def rsync_path(user: str, host: str, port: int, remote: str, local: Path, direct
     else:
         local.parent.mkdir(parents=True, exist_ok=True)
 
-    transport = f"ssh -p {port} -o StrictHostKeyChecking=accept-new"
+    # -q + LogLevel=ERROR suppress the host's MOTD/banner, which otherwise
+    # prints on every single rsync (7x per sync here).
+    transport = (f"ssh -p {port} -q -o LogLevel=ERROR "
+                 f"-o StrictHostKeyChecking=accept-new")
     source = f"{user}@{host}:{remote}"
     destination = str(local) + ("/" if directory else "")
 
     # Deliberately allow updates: interrupted rsyncs can finish correctly on resume.
     p = subprocess.run([
         "rsync", "-a", "--partial-dir=.rsync-partial",
-        "--info=stats1", "-e", transport, source, destination,
-    ])
+        "-e", transport, source, destination,
+    ], text=True, capture_output=True)
     if p.returncode:
-        raise RuntimeError(f"rsync failed for {remote} with exit code {p.returncode}")
+        raise RuntimeError(f"rsync failed for {remote} with exit code "
+                           f"{p.returncode}: {(p.stderr or p.stdout).strip()[:200]}")
 
 
 def sync_instance(

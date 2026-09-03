@@ -110,9 +110,19 @@ fi
 
 touch /workspace/READY
 status "READY"
-NGPU="${NGPU:-$(nvidia-smi -L 2>/dev/null | wc -l)}"
+# Use every GPU the box actually has. NGPU (from --num-gpus) is only honoured
+# when it is a positive integer; 0/unset/garbage means "detect", so renting an
+# N-GPU box can never silently run on one GPU.
+DETECTED=$(nvidia-smi -L 2>/dev/null | wc -l)
+[ "${DETECTED:-0}" -ge 1 ] 2>/dev/null || DETECTED=1
+if ! [[ "${NGPU:-}" =~ ^[1-9][0-9]*$ ]]; then
+  NGPU="$DETECTED"
+elif [ "$NGPU" -ne "$DETECTED" ]; then
+  status "WARNING requested NGPU=$NGPU but box has $DETECTED GPU(s); using $DETECTED"
+  NGPU="$DETECTED"
+fi
 export NGPU
-status "GPUS $NGPU"
+status "GPUS $NGPU (detected $DETECTED)"
 status "RUNNING $RUN_SCRIPT"
 
 (

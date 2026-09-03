@@ -5,309 +5,328 @@ from typing import Any
 
 REFERENCE_CPU = "AMD Ryzen 9 9950X"
 REFERENCE_SCORE = 4727
-CPU_SCORES = {
-    "Intel Core Ultra 9 285K": 5085,
-    "Intel Core Ultra 7 270K Plus": 5068,
-    "Intel Core Ultra 7 265K": 4928,
-    "Intel Core Ultra 7 265KF": 4927,
-    "Intel Core Ultra 9 285": 4900,
-    "Intel Core Ultra 9 290K Plus": 4823,
-    "Intel Core i9-14900KS": 4811,
-    "Intel Core Ultra 5 250K Plus": 4780,
-    "Intel Core Ultra 7 265F": 4751,
-    "AMD Ryzen 9 9950X3D": 4738,
-    "AMD Ryzen 9 9950X": 4727,
-    "Intel Core Ultra 5 250KF Plus": 4723,
-    "Intel Core i9-13900KS": 4715,
-    "Intel Core Ultra 5 245K": 4715,
-    "Intel Core Ultra 5 245KF": 4714,
-    "AMD Ryzen 7 9850X3D": 4704,
-    "AMD Ryzen 9 PRO 9965": 4690,
-    "Intel Core Ultra 7 265": 4690,
-    "Intel Core i9-14900K": 4689,
-    "Intel Core i9-14900KF": 4688,
-    "AMD Ryzen 7 9700F": 4686,
-    "AMD Ryzen 9 9900X": 4673,
-    "AMD Ryzen 9 9950X3D2": 4668,
-    "AMD Ryzen 7 9700X": 4643,
-    "AMD Ryzen 5 PRO 9655": 4640,
-    "AMD Ryzen 5 PRO 9645": 4636,
-    "AMD Ryzen 9 9900X3D": 4636,
-    "AMD Ryzen 7 PRO 9745": 4624,
-    "AMD Ryzen 9 PRO 9945": 4619,
-    "AMD Ryzen 9 PRO 9965X3D": 4613,
-    "AMD Ryzen 7 PRO 9755": 4609,
-    "Intel Core Ultra 9 285T": 4600,
-    "Intel Core i9-13900K": 4596,
-    "Intel Core i9-13900KF": 4580,
-    "AMD Ryzen 9 PRO 9955": 4579,
-    "AMD Ryzen Threadripper 9960X": 4577,
-    "AMD EPYC 4245P": 4575,
-    "AMD EPYC 4465P": 4575,
-    "Intel Core Ultra 3 205": 4575,
-    "AMD Ryzen Threadripper PRO 9945WX": 4572,
-    "AMD Ryzen 5 9600X": 4571,
-    "Intel Core Ultra 5 235A": 4557,
-    "AMD Ryzen Threadripper PRO 9965WX": 4554,
-    "AMD Ryzen Threadripper 9980X": 4540,
-    "AMD EPYC 4585PX": 4538,
-    "AMD Ryzen Threadripper PRO 9995WX": 4537,
-    "AMD Ryzen Threadripper 9970X": 4533,
-    "AMD Ryzen Threadripper PRO 9955WX": 4530,
-    "Intel Xeon 6349P": 4528,
-    "Intel Core Ultra 5 230F": 4527,
-    "Intel Core Ultra 5 235": 4513,
-    "Intel Core i9-14900F": 4504,
-    "AMD Ryzen Threadripper PRO 9985WX": 4484,
-    "Intel Core i7-14700KF": 4465,
-    "Intel Core i7-14700K": 4454,
-    "AMD Ryzen 7 PRO 9755X3D": 4442,
-    "AMD Ryzen 7 9800X3D": 4421,
-    "Intel Core Ultra 5 225": 4413,
-    "AMD Ryzen Threadripper PRO 9975WX": 4410,
-    "AMD EPYC 4345P": 4408,
-    "Intel Core Ultra 5 245": 4406,
-    "Intel Core Ultra 5 225F": 4401,
-    "Intel Core i9-13900F": 4398,
-    "Intel Core Ultra 5 245T": 4383,
-    "AMD Ryzen 5 9600": 4377,
-    "Intel Core Ultra 7 265T": 4344,
-    "Intel Core Ultra 5 235T": 4343,
-    "Intel Core i7-13700KF": 4329,
-    "Intel Core i7-13700K": 4326,
-    "Intel Core i9-14900": 4323,
-    "Intel Core i9-12900KS": 4323,
-    "AMD EPYC 4545P": 4318,
-    "Intel Xeon 6369P": 4303,
-    "Intel Xeon E-2488": 4300,
-    "AMD EPYC 4564P": 4292,
-    "Intel Core i9-13900": 4281,
-    "Intel Core i5-14600K": 4268,
-    "Intel Core Ultra 5 225T": 4259,
-    "AMD EPYC 9175F": 4256,
-    "AMD Ryzen 5 9500F": 4254,
-    "Intel Core i7-14700F": 4254,
-    "Intel Core i5-14600KF": 4252,
-    "AMD Ryzen 9 7950X": 4252,
-    "Intel Core i7-14700": 4236,
-    "Intel Xeon 6357P": 4233,
-    "AMD Ryzen 9 7900X": 4226,
-    "Intel Xeon 6353P": 4226,
-    "Intel Xeon 6325P": 4213,
-    "Intel Core i7-14790F": 4191,
-    "AMD Ryzen 7 7700X": 4176,
-    "AMD Ryzen 9 PRO 7945": 4175,
-    "AMD Ryzen Threadripper 7970X": 4174,
-    "AMD EPYC 9575F": 4173,
-    "Intel Core i5-14600": 4168,
-    "Intel Core i9-13900T": 4165,
-    "AMD EPYC 4464P": 4146,
-    "AMD Ryzen 9 7950X3D": 4144,
-    "AMD Ryzen 5 7600X": 4129,
-    "Intel Core i9-12900K": 4128,
-    "AMD Ryzen Threadripper 7960X": 4124,
-    "AMD Ryzen 9 7900": 4120,
-    "Intel Core i9-12900KF": 4120,
-    "AMD EPYC 4484PX": 4119,
-    "AMD Ryzen 9 7900X3D": 4118,
-    "AMD Ryzen 7 PRO 7745": 4117,
-    "Intel Core i7-13700F": 4116,
-    "Intel Core i5-13600K": 4111,
-    "Intel Core i5-13600KF": 4111,
-    "Intel Xeon 6337P": 4104,
-    "Intel Core i7-13700": 4092,
-    "AMD Ryzen Threadripper PRO 7955WX": 4086,
-    "AMD Ryzen Threadripper PRO 7945WX": 4076,
-    "AMD Ryzen 7 7700": 4050,
-    "Intel Core i5-13600": 4047,
-    "Intel Core i7-13790F": 4035,
-    "AMD Ryzen Threadripper 7980X": 4024,
-    "Intel Xeon 676X": 4015,
-    "Intel Core i9-12900F": 4013,
-    "AMD Ryzen Threadripper PRO 7965WX": 4009,
-    "Intel Core i7-12700K": 4003,
-    "Intel Core i9-12900": 4002,
-    "AMD Ryzen Threadripper PRO 7975WX": 3989,
-    "Intel Core i7-12700KF": 3980,
-    "AMD Ryzen Threadripper PRO 7985WX": 3962,
-    "Intel Core i5-14490F": 3958,
-    "AMD Ryzen 7 PRO 8700G": 3958,
-    "AMD Ryzen 5 PRO 7645": 3954,
-    "Intel Core i5-14500": 3950,
-    "AMD Ryzen 5 PRO 8500G": 3949,
-    "AMD Ryzen 5 PRO 8600G": 3941,
-    "Intel Xeon 674X": 3933,
-    "AMD Ryzen 7 8700G": 3921,
-    "Intel Core i5-12600K": 3917,
-    "Intel Core i5-12600KF": 3916,
-    "Intel Core i7-14700T": 3911,
-    "AMD Ryzen 5 7600": 3907,
-    "AMD Ryzen 5 PRO 8500GE": 3907,
-    "AMD Ryzen 5 8500GE": 3904,
-    "AMD EPYC 4124P": 3897,
-    "Intel Xeon E-2478": 3895,
-    "AMD Ryzen 5 8500G": 3876,
-    "AMD Ryzen 5 8600G": 3876,
-    "AMD Ryzen 7 8700F": 3873,
-    "AMD Ryzen 5 PRO 8600GE": 3872,
-    "Intel Xeon 636": 3871,
-    "AMD Ryzen 7 PRO 8700GE": 3859,
-    "Intel Core i5-13490F": 3861,
-    "Intel Core i5-13500": 3855,
-    "AMD EPYC 9655P": 3849,
-    "AMD EPYC 9655": 3847,
-    "Intel Core i7-12700F": 3841,
-    "Intel Core i7-12700": 3841,
-    "Intel Xeon E-2434": 3840,
-    "Intel Xeon E-2486": 3837,
-    "Intel Xeon 638": 3835,
-    "AMD Ryzen Threadripper PRO 7995WX": 3831,
-    "Intel Xeon E-2468": 3828,
-    "AMD Ryzen 5 7500F": 3825,
-    "AMD EPYC 9R45": 3812,
-    "AMD EPYC 9275F": 3810,
-    "Intel Core i7-13700T": 3803,
-    "AMD EPYC 4584PX": 3795,
-    "Intel Xeon 6315P": 3783,
-    "AMD EPYC 9455 Embedded": 3782,
-    "AMD EPYC 9475F": 3779,
-    "Intel Xeon 654": 3778,
-    "AMD Ryzen 3 8300G": 3778,
-    "Intel Core i3-14100F": 3775,
-    "Intel Core i5-13600T": 3769,
-    "Intel Core i3-14100": 3760,
-    "AMD Ryzen 7 7800X3D": 3759,
-    "Intel Xeon 678X": 3758,
-    "AMD EPYC 9555 Embedded": 3757,
-    "AMD EPYC 9375F": 3762,
-    "AMD EPYC 9355P": 3747,
-    "AMD EPYC 9455P": 3745,
-    "Intel Core i5-14600T": 3744,
-    "Intel Xeon 696X": 3742,
-    "Intel Core i5-14400": 3741,
-    "Intel Core i5-14500T": 3741,
-    "Intel Core i9-12900T": 3738,
-    "Intel Xeon w7-2595X": 3735,
-    "AMD EPYC 4244P": 3724,
-    "AMD EPYC 9535": 3720,
-    "Intel Xeon w9-3595X": 3717,
-    "Intel Xeon 658X": 3710,
-    "Intel Core i5-14400F": 3700,
-    "AMD EPYC 9565": 3696,
-    "Intel Core i5-12490F": 3689,
-    "AMD Ryzen 5 7400F": 3686,
-    "AMD Ryzen 5 8400F": 3685,
-    "AMD EPYC 9135": 3672,
-    "Intel Xeon w9-3575X": 3672,
-    "AMD EPYC 9255": 3655,
-    "Intel Core i5-12500": 3648,
-    "Intel Xeon 6507P": 3643,
-    "Intel Core 5 120F": 3636,
-    "Intel Core i7-12700E": 3633,
-    "Intel Core i5-13400F": 3628,
-    "AMD EPYC 4364P": 3619,
-    "AMD Ryzen 5 7600X3D": 3606,
-    "Intel Xeon w5-3535X": 3602,
-    "Intel Xeon E-2436": 3601,
-    "Intel Xeon w5-2555X": 3600,
-    "Intel Core i3-13100F": 3599,
-    "Intel Xeon 634": 3595,
-    "Intel Xeon w5-2565X": 3595,
-    "Intel Core 5 120": 3588,
-    "Intel Core i5-13400": 3584,
-    "Intel Core i5-13500T": 3577,
-    "Intel Xeon w5-2545": 3573,
-    "Intel Core i3-12300": 3570,
-    "Intel Xeon E-2456": 3568,
-    "Intel Core i7-12700T": 3567,
-    "Intel Xeon E-2414": 3553,
-    "Intel Xeon w7-2475X": 3552,
-    "Intel Xeon w7-3555": 3549,
-    "Intel Xeon W-1390P": 3544,
-    "Intel Core i5-12600T": 3544,
-    "AMD EPYC 9B45": 3540,
-    "Intel Xeon 6527P": 3539,
-    "Intel Core i3-13100": 3537,
-    "AMD Ryzen 7 5800XT": 3534,
-    "AMD EPYC 9755": 3526,
-    "AMD EPYC 4344P": 3526,
-    "Intel Core i5-14400T": 3516,
-    "Intel Core i9-11900KF": 3516,
-    "Intel Core i9-11900K": 3501,
-    "Intel Core i3-14100T": 3497,
-    "AMD Ryzen 5 7500X3D": 3492,
-    "Intel Core i5-12400F": 3485,
-    "AMD Ryzen 9 5900XT": 3478,
-    "AMD Ryzen 9 5950X": 3476,
-    "Intel Core i5-13400T": 3469,
-    "AMD Ryzen 5 5600XT": 3468,
-    "AMD Ryzen 9 5900X": 3465,
-    "Intel Core i5-12400": 3465,
-    "Intel Xeon w7-2495X": 3459,
-    "Intel Xeon W-1370": 3459,
-    "Intel Xeon w5-2465X": 3455,
-    "Intel Core i5-12500T": 3453,
-    "Intel Xeon w7-3545": 3452,
-    "Intel Xeon Gold 6534": 3451,
-    "Intel Xeon 6333P": 3450,
-    "Intel Xeon 6745P": 3450,
-    "Intel Xeon w9-3495X": 3449,
-    "Intel Xeon W-1350P": 3448,
-    "AMD Ryzen 7 5800X": 3448,
-    "AMD Ryzen 7 PRO 5845": 3442,
-    "AMD Ryzen 5 PRO 5645": 3441,
-    "Intel Xeon W-1370P": 3438,
-    "AMD Ryzen 9 5900": 3433,
-    "Intel Core i3-12100F": 3432,
-    "Intel Xeon w3-2525": 3426,
-    "Intel Core i9-11900F": 3421,
-    "AMD EPYC 9555P": 3410,
-    "Intel Xeon w7-3565X": 3407,
-    "Intel Xeon W-1350": 3405,
-    "Intel Xeon W-1390": 3399,
-    "Intel Xeon E-2388G": 3399,
-    "Intel Xeon E-2386G": 3398,
-    "Intel Xeon 6973P-C": 3396,
-    "AMD Ryzen 7 5700X": 3386,
-    "Intel Core i7-11700K": 3385,
-    "Intel Xeon w5-2455X": 3380,
-    "AMD Ryzen 7 5800": 3377,
-    "Intel Core i3-13100T": 3373,
-    "Intel Core i9-11900": 3371,
-    "AMD Ryzen 7 PRO 5755G": 3366,
-    "AMD Ryzen 5 5600X": 3366,
-    "Intel Core i7-11700KF": 3361,
-    "Intel Xeon E-2374G": 3360,
-    "AMD EPYC 9115": 3360,
-    "Intel Core i3-12300T": 3359,
-    "Intel Xeon 6520P": 3356,
-    "AMD Ryzen 7 PRO 5755GE": 3353,
-    "Intel Xeon Gold 6434H": 3353,
-    "Intel Xeon w5-2445": 3354,
-    "Intel Xeon w5-3425": 3350,
-    "AMD Ryzen Threadripper PRO 5945WX": 3348,
-    "Intel Xeon Gold 5420+": 3347,
-    "Intel Xeon E-2378G": 3339,
-    "Intel Xeon w9-3475X": 3336,
-    "AMD Ryzen 5 5600GT": 3336,
-    "Intel Core i5-11600K": 3335,
-    "Intel Core i5-12400T": 3335,
-    "Intel Xeon w5-3525": 3330,
-    "AMD Ryzen 7 5700GE": 3328,
-    "Intel Core i5-11600KF": 3326,
-    "AMD Ryzen Threadripper PRO 5955WX": 3322,
-    "AMD Ryzen 5 5600T": 3321,
-    "AMD Ryzen Threadripper PRO 5975WX": 3321,
-    "Intel Xeon E-2356G": 3320,
-    "AMD Ryzen Threadripper PRO 5965WX": 3317,
-}
+_CPU_TABLE = """
+Intel Core Ultra 9 285K 5085
+Intel Core Ultra 7 270K Plus 5068
+Intel Core Ultra 7 265K 4928
+Intel Core Ultra 7 265KF 4927
+Intel Core Ultra 9 285 4900
+Intel Core Ultra 9 290K Plus 4823
+Intel Core i9-14900KS 4811
+Intel Core Ultra 5 250K Plus 4780
+Intel Core Ultra 7 265F 4751
+AMD Ryzen 9 9950X3D 4738
+AMD Ryzen 9 9950X 4727
+Intel Core Ultra 5 250KF Plus 4723
+Intel Core i9-13900KS 4715
+Intel Core Ultra 5 245K 4715
+Intel Core Ultra 5 245KF 4714
+AMD Ryzen 7 9850X3D 4704
+AMD Ryzen 9 PRO 9965 4690
+Intel Core Ultra 7 265 4690
+Intel Core i9-14900K 4689
+Intel Core i9-14900KF 4688
+AMD Ryzen 7 9700F 4686
+AMD Ryzen 9 9900X 4673
+AMD Ryzen 9 9950X3D2 4668
+AMD Ryzen 7 9700X 4643
+AMD Ryzen 5 PRO 9655 4640
+AMD Ryzen 5 PRO 9645 4636
+AMD Ryzen 9 9900X3D 4636
+AMD Ryzen 7 PRO 9745 4624
+AMD Ryzen 9 PRO 9945 4619
+AMD Ryzen 9 PRO 9965X3D 4613
+AMD Ryzen 7 PRO 9755 4609
+Intel Core Ultra 9 285T 4600
+Intel Core i9-13900K 4596
+Intel Core i9-13900KF 4580
+AMD Ryzen 9 PRO 9955 4579
+AMD Ryzen Threadripper 9960X 4577
+AMD EPYC 4245P 4575
+AMD EPYC 4465P 4575
+Intel Core Ultra 3 205 4575
+AMD Ryzen Threadripper PRO 9945WX 4572
+AMD Ryzen 5 9600X 4571
+Intel Core Ultra 5 235A 4557
+AMD Ryzen Threadripper PRO 9965WX 4554
+AMD Ryzen Threadripper 9980X 4540
+AMD EPYC 4585PX 4538
+AMD Ryzen Threadripper PRO 9995WX 4537
+AMD Ryzen Threadripper 9970X 4533
+AMD Ryzen Threadripper PRO 9955WX 4530
+Intel Xeon 6349P 4528
+Intel Core Ultra 5 230F 4527
+Intel Core Ultra 5 235 4513
+Intel Core i9-14900F 4504
+AMD Ryzen Threadripper PRO 9985WX 4484
+Intel Core i7-14700KF 4465
+Intel Core i7-14700K 4454
+AMD Ryzen 7 PRO 9755X3D 4442
+AMD Ryzen 7 9800X3D 4421
+Intel Core Ultra 5 225 4413
+AMD Ryzen Threadripper PRO 9975WX 4410
+AMD EPYC 4345P 4408
+Intel Core Ultra 5 245 4406
+Intel Core Ultra 5 225F 4401
+Intel Core i9-13900F 4398
+Intel Core Ultra 5 245T 4383
+AMD Ryzen 5 9600 4377
+Intel Core Ultra 7 265T 4344
+Intel Core Ultra 5 235T 4343
+Intel Core i7-13700KF 4329
+Intel Core i7-13700K 4326
+Intel Core i9-14900 4323
+Intel Core i9-12900KS 4323
+AMD EPYC 4545P 4318
+Intel Xeon 6369P 4303
+Intel Xeon E-2488 4300
+AMD EPYC 4564P 4292
+Intel Core i9-13900 4281
+Intel Core i5-14600K 4268
+Intel Core Ultra 5 225T 4259
+AMD EPYC 9175F 4256
+AMD Ryzen 5 9500F 4254
+Intel Core i7-14700F 4254
+Intel Core i5-14600KF 4252
+AMD Ryzen 9 7950X 4252
+Intel Core i7-14700 4236
+Intel Xeon 6357P 4233
+AMD Ryzen 9 7900X 4226
+Intel Xeon 6353P 4226
+Intel Xeon 6325P 4213
+Intel Core i7-14790F 4191
+AMD Ryzen 7 7700X 4176
+AMD Ryzen 9 PRO 7945 4175
+AMD Ryzen Threadripper 7970X 4174
+AMD EPYC 9575F 4173
+Intel Core i5-14600 4168
+Intel Core i9-13900T 4165
+AMD EPYC 4464P 4146
+AMD Ryzen 9 7950X3D 4144
+AMD Ryzen 5 7600X 4129
+Intel Core i9-12900K 4128
+AMD Ryzen Threadripper 7960X 4124
+AMD Ryzen 9 7900 4120
+Intel Core i9-12900KF 4120
+AMD EPYC 4484PX 4119
+AMD Ryzen 9 7900X3D 4118
+AMD Ryzen 7 PRO 7745 4117
+Intel Core i7-13700F 4116
+Intel Core i5-13600K 4111
+Intel Core i5-13600KF 4111
+Intel Xeon 6337P 4104
+Intel Core i7-13700 4092
+AMD Ryzen Threadripper PRO 7955WX 4086
+AMD Ryzen Threadripper PRO 7945WX 4076
+AMD Ryzen 7 7700 4050
+Intel Core i5-13600 4047
+Intel Core i7-13790F 4035
+AMD Ryzen Threadripper 7980X 4024
+Intel Xeon 676X 4015
+Intel Core i9-12900F 4013
+AMD Ryzen Threadripper PRO 7965WX 4009
+Intel Core i7-12700K 4003
+Intel Core i9-12900 4002
+AMD Ryzen Threadripper PRO 7975WX 3989
+Intel Core i7-12700KF 3980
+AMD Ryzen Threadripper PRO 7985WX 3962
+Intel Core i5-14490F 3958
+AMD Ryzen 7 PRO 8700G 3958
+AMD Ryzen 5 PRO 7645 3954
+Intel Core i5-14500 3950
+AMD Ryzen 5 PRO 8500G 3949
+AMD Ryzen 5 PRO 8600G 3941
+Intel Xeon 674X 3933
+AMD Ryzen 7 8700G 3921
+Intel Core i5-12600K 3917
+Intel Core i5-12600KF 3916
+Intel Core i7-14700T 3911
+AMD Ryzen 5 7600 3907
+AMD Ryzen 5 PRO 8500GE 3907
+AMD Ryzen 5 8500GE 3904
+AMD EPYC 4124P 3897
+Intel Xeon E-2478 3895
+AMD Ryzen 5 8500G 3876
+AMD Ryzen 5 8600G 3876
+AMD Ryzen 7 8700F 3873
+AMD Ryzen 5 PRO 8600GE 3872
+Intel Xeon 636 3871
+Intel Core i5-13490F 3861
+AMD Ryzen 7 PRO 8700GE 3859
+Intel Core i5-13500 3855
+AMD EPYC 9655P 3849
+AMD EPYC 9655 3847
+Intel Core i7-12700F 3841
+Intel Core i7-12700 3841
+Intel Xeon E-2434 3840
+Intel Xeon E-2486 3837
+Intel Xeon 638 3835
+AMD Ryzen Threadripper PRO 7995WX 3831
+Intel Xeon E-2468 3828
+AMD Ryzen 5 7500F 3825
+AMD EPYC 9R45 3812
+AMD EPYC 9275F 3810
+Intel Core i7-13700T 3803
+AMD EPYC 4584PX 3795
+Intel Xeon 6315P 3783
+AMD EPYC 9455 Embedded 3782
+AMD EPYC 9475F 3779
+Intel Xeon 654 3778
+AMD Ryzen 3 8300G 3778
+Intel Core i3-14100F 3775
+Intel Core i5-13600T 3769
+AMD EPYC 9375F 3762
+Intel Core i3-14100 3760
+AMD Ryzen 7 7800X3D 3759
+Intel Xeon 678X 3758
+AMD EPYC 9555 Embedded 3757
+AMD EPYC 9355P 3747
+AMD EPYC 9455P 3745
+Intel Core i5-14600T 3744
+Intel Xeon 696X 3742
+Intel Core i5-14400 3741
+Intel Core i5-14500T 3741
+Intel Core i9-12900T 3738
+Intel Xeon w7-2595X 3735
+AMD EPYC 4244P 3724
+AMD EPYC 9535 3720
+Intel Xeon w9-3595X 3717
+Intel Xeon 658X 3710
+Intel Core i5-14400F 3700
+AMD EPYC 9565 3696
+Intel Core i5-12490F 3689
+AMD Ryzen 5 7400F 3686
+AMD Ryzen 5 8400F 3685
+AMD EPYC 9135 3672
+Intel Xeon w9-3575X 3672
+AMD EPYC 9255 3655
+Intel Core i5-12500 3648
+Intel Xeon 6507P 3643
+Intel Core 5 120F 3636
+Intel Core i7-12700E 3633
+Intel Core i5-13400F 3628
+AMD EPYC 4364P 3619
+AMD Ryzen 5 7600X3D 3606
+Intel Xeon w5-3535X 3602
+Intel Xeon E-2436 3601
+Intel Xeon w5-2555X 3600
+Intel Core i3-13100F 3599
+Intel Xeon 634 3595
+Intel Xeon w5-2565X 3595
+Intel Core 5 120 3588
+Intel Core i5-13400 3584
+Intel Core i5-13500T 3577
+Intel Xeon w5-2545 3573
+Intel Core i3-12300 3570
+Intel Xeon E-2456 3568
+Intel Core i7-12700T 3567
+Intel Xeon E-2414 3553
+Intel Xeon w7-2475X 3552
+Intel Xeon w7-3555 3549
+Intel Xeon W-1390P 3544
+Intel Core i5-12600T 3544
+AMD EPYC 9B45 3540
+Intel Xeon 6527P 3539
+Intel Core i3-13100 3537
+AMD Ryzen 7 5800XT 3534
+AMD EPYC 9755 3526
+AMD EPYC 4344P 3526
+Intel Core i5-14400T 3516
+Intel Core i9-11900KF 3516
+Intel Core i9-11900K 3501
+Intel Core i3-14100T 3497
+AMD Ryzen 5 7500X3D 3492
+Intel Core i5-12400F 3485
+AMD Ryzen 9 5900XT 3478
+AMD Ryzen 9 5950X 3476
+Intel Core i5-13400T 3469
+AMD Ryzen 5 5600XT 3468
+AMD Ryzen 9 5900X 3465
+Intel Core i5-12400 3465
+Intel Xeon w7-2495X 3459
+Intel Xeon W-1370 3459
+Intel Xeon w5-2465X 3455
+Intel Core i5-12500T 3453
+Intel Xeon w7-3545 3452
+Intel Xeon Gold 6534 3451
+Intel Xeon 6333P 3450
+Intel Xeon 6745P 3450
+Intel Xeon w9-3495X 3449
+Intel Xeon W-1350P 3448
+AMD Ryzen 7 5800X 3448
+AMD Ryzen 7 PRO 5845 3442
+AMD Ryzen 5 PRO 5645 3441
+Intel Xeon W-1370P 3438
+AMD Ryzen 9 5900 3433
+Intel Core i3-12100F 3432
+Intel Xeon w3-2525 3426
+Intel Core i9-11900F 3421
+AMD EPYC 9555P 3410
+Intel Xeon w7-3565X 3407
+Intel Xeon W-1350 3405
+Intel Xeon W-1390 3399
+Intel Xeon E-2388G 3399
+Intel Xeon E-2386G 3398
+Intel Xeon 6973P-C 3396
+AMD Ryzen 7 5700X 3386
+Intel Core i7-11700K 3385
+Intel Xeon w5-2455X 3380
+AMD Ryzen 7 5800 3377
+Intel Core i3-13100T 3373
+Intel Core i9-11900 3371
+AMD Ryzen 7 PRO 5755G 3366
+AMD Ryzen 5 5600X 3366
+Intel Core i7-11700KF 3361
+Intel Xeon E-2374G 3360
+AMD EPYC 9115 3360
+Intel Core i3-12300T 3359
+Intel Xeon 6520P 3356
+Intel Xeon w5-2445 3354
+AMD Ryzen 7 PRO 5755GE 3353
+Intel Xeon Gold 6434H 3353
+Intel Xeon w5-3425 3350
+AMD Ryzen Threadripper PRO 5945WX 3348
+Intel Xeon Gold 5420+ 3347
+Intel Xeon E-2378G 3339
+Intel Xeon w9-3475X 3336
+AMD Ryzen 5 5600GT 3336
+Intel Core i5-11600K 3335
+Intel Core i5-12400T 3335
+Intel Xeon w5-3525 3330
+AMD Ryzen 7 5700GE 3328
+Intel Core i5-11600KF 3326
+AMD Ryzen Threadripper PRO 5955WX 3322
+AMD Ryzen 5 5600T 3321
+AMD Ryzen Threadripper PRO 5975WX 3321
+Intel Xeon E-2356G 3320
+AMD Ryzen Threadripper PRO 5965WX 3317
+AMD EPYC 9654 2898
+AMD EPYC 9B14 2886
+AMD EPYC 9354 2766
+Intel Xeon Platinum 8469C 2727
+Intel Xeon Platinum 8481C 2469
+AMD EPYC 7V12 2054
+AMD EPYC 7302 2024
+AMD EPYC 7452 2007
+Intel Xeon Platinum 8352V 1967
+AMD EPYC 7B12 1927
+"""
+CPU_SCORES = {}
+for _ln in _CPU_TABLE.strip().splitlines():
+    _name, _score = _ln.rsplit(" ", 1)
+    CPU_SCORES[_name] = int(_score)
+
+# The full ranking is the single source of truth; ALL_CPU_SCORES is kept as an
+# alias because the matcher and any external callers reference it.
+ALL_CPU_SCORES = CPU_SCORES
+
 KNOWN_REJECT=("EPYC 7K62","EPYC 7H12","EPYC 7742","EPYC 7702","EPYC 7642","EPYC 7551","EPYC 7601")
 GPU_SCORE={"RTX 5090":20,"RTX 4090":10}
 
 def normalize_name(v:str)->str:
     v=v.upper().replace("(R)","").replace("(TM)","")
     return " ".join(re.sub(r"[^A-Z0-9]+"," ",v).split())
-CPU_MATCH=sorted(((normalize_name(n),n,s) for n,s in CPU_SCORES.items()),key=lambda x:len(x[0]),reverse=True)
+CPU_MATCH=sorted(((normalize_name(n),n,s) for n,s in ALL_CPU_SCORES.items()),key=lambda x:len(x[0]),reverse=True)
 
 def cpu_tier_from_score(score:int|None)->str:
     if score is None:return "?"
@@ -316,13 +335,39 @@ def cpu_tier_from_score(score:int|None)->str:
     if score>=4018:return "C"
     if score>=3782:return "D"
     if score>=3309:return "E"
-    return "?"
+    return "LOW"
+
+def _model_tokens(name):
+    """Pull model-like tokens (12900K, 14700K, 7B12, 9354) out of a CPU
+    string, so Vast's naming variants still match the score table."""
+    import re as _re
+    out = set()
+    for tok in normalize_name(name).split():
+        if _re.fullmatch(r"\d{1,2}", tok) or _re.fullmatch(r"\d{1,2}TH", tok):
+            continue
+        if _re.fullmatch(r"[A-Z]*\d{3,}[A-Z0-9]*", tok):
+            out.add(tok)
+    return out
+
+
+_alias_cand = {}
+for _canon, _sc in ALL_CPU_SCORES.items():
+    for _tok in _model_tokens(_canon):
+        _alias_cand.setdefault(_tok, []).append((_canon, _sc))
+CPU_MODEL_ALIASES = {t: v[0] for t, v in _alias_cand.items() if len(v) == 1}
+
 
 def cpu_info(name:str):
     norm=normalize_name(name)
     if any(normalize_name(x) in norm for x in KNOWN_REJECT):return "REJECT",None,None,None
     for needle,canonical,score in CPU_MATCH:
         if needle in norm:return cpu_tier_from_score(score),score,score/REFERENCE_SCORE*100.0,canonical
+    # fall back to a UNIQUE model token (handles "12th Gen Core i9-12900K",
+    # "AMD EPYC 7B12 64-Core Processor", etc.)
+    hits={CPU_MODEL_ALIASES[t] for t in _model_tokens(name) if t in CPU_MODEL_ALIASES}
+    if len(hits)==1:
+        canonical,score=next(iter(hits))
+        return cpu_tier_from_score(score),score,score/REFERENCE_SCORE*100.0,canonical
     return "?",None,None,None
 
 def fnum(v:Any,default:float=0.0)->float:
@@ -358,14 +403,26 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
     gpus=gpus or ["RTX 4090","RTX 5090"];gpu_list=", ".join(json.dumps(g) for g in gpus)
     n_clause=(f"num_gpus={exact_gpus}" if exact_gpus is not None else
              f"num_gpus>={max(1,min_gpus)}" + (f" num_gpus<={max_gpus}" if max_gpus else ""))
-    query=f"rentable=true {n_clause} reliability>={min_reliability} direct_port_count>=1 cpu_cores_effective>={min_cpus} disk_space>={min_disk} duration>={min_duration} gpu_name in [{gpu_list}]"
+    query=f"rentable=true rented=any verified=any external=any {n_clause} reliability>={min_reliability} direct_port_count>=1 cpu_cores_effective>={min_cpus} disk_space>={min_disk} duration>={min_duration} gpu_name in [{gpu_list}]"
     if max_price is not None:query+=f" dph<={max_price}"
     # --type on-demand is PINNED: on-demand rentals give exclusive, non-
     # preemptible control of the GPU for the life of the instance. There is
     # deliberately no flag to switch to bid/interruptible -- a preempted
     # instance is killed mid-run, and this campaign has no mid-run resume.
-    data=run_json(["vastai","search","offers",query,"--type","on-demand",
-                   "--order","dph","--limit",str(limit),"--raw"])
+    # -n stops the CLI silently adding verified=true/external=false/rentable
+    # filters of its own; every policy is stated explicitly above instead.
+    # Each GPU model is queried separately so one model cannot crowd out the
+    # other within the server-side limit.
+    items=[]
+    for g in gpus:
+        q=query.replace(f"gpu_name in [{gpu_list}]",f'gpu_name="{g}"')
+        items+=unwrap_offers(run_json(["vastai","search","offers","-n",q,
+                                       "--type","on-demand","--order","dph",
+                                       "--limit",str(limit),"--raw"]))
+    dedup={}
+    for it in items:
+        dedup[it.get("id") or it.get("ask_contract_id") or id(it)]=it
+    data=list(dedup.values())
     rows=[]
     for item in unwrap_offers(data):
         row=normalize_offer(item)
@@ -413,16 +470,19 @@ def print_table(rows):
     for row in out:print("  ".join(row[i].ljust(widths[i]) for i in range(len(headers))))
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument("--gpu",action="append",default=[]);ap.add_argument("--max-price",type=float);ap.add_argument("--min-reliability",type=float,default=0.99);ap.add_argument("--min-cpus",type=float,default=8);ap.add_argument("--min-disk",type=float,default=25);ap.add_argument("--min-duration",type=float,default=1.0);ap.add_argument("--tiers",default="A,B,C,D,E,?");ap.add_argument("--limit",type=int,default=100);ap.add_argument("--top",type=int,default=30)
-    ap.add_argument("--gpus",type=int,help="Require EXACTLY this many GPUs per box (default 1).")
+    ap=argparse.ArgumentParser();ap.add_argument("--gpu",action="append",default=[]);ap.add_argument("--max-price",type=float);ap.add_argument("--min-reliability",type=float,default=0.99);ap.add_argument("--min-cpus",type=float,default=8);ap.add_argument("--min-disk",type=float,default=25);ap.add_argument("--min-duration",type=float,default=1.0);ap.add_argument("--tiers",default="A,B,C,D,E,LOW,?");ap.add_argument("--limit",type=int,default=1000);ap.add_argument("--top",type=int,default=50)
+    ap.add_argument("--gpus",type=int,help="Require EXACTLY this many GPUs per box.")
+    ap.add_argument("--single",action="store_true",help="Only 1-GPU boxes (shorthand for --gpus 1).")
     ap.add_argument("--min-gpus",type=int,default=1);ap.add_argument("--max-gpus",type=int)
     ap.add_argument("--min-cpus-per-gpu",type=float,default=8.0,help="CPU QUANTITY floor per GPU; tiers cover CPU QUALITY.")
     ap.add_argument("--max-price-per-gpu",type=float)
-    ap.add_argument("--any-gpus",action="store_true",help="Show 1..N GPU boxes together instead of exactly one count.")
+
     args=ap.parse_args()
     if shutil.which("vastai") is None:raise SystemExit("vastai CLI not found")
     tiers={x.strip().upper() for x in args.tiers.split(",") if x.strip()}
-    exact=None if args.any_gpus else (args.gpus if args.gpus is not None else 1)
+    # Default: ALL GPU counts. One independent experiment runs per GPU, so a
+    # 4-GPU box is just four workers -- there is no reason to hide them.
+    exact=1 if args.single else args.gpus
     print_table(search_offers(gpus=args.gpu or None,max_price=args.max_price,min_reliability=args.min_reliability,
                               min_cpus=0 if exact is None else args.min_cpus,min_disk=args.min_disk,
                               min_duration=args.min_duration,allowed_tiers=tiers,limit=args.limit,
