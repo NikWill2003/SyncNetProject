@@ -403,7 +403,9 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
     gpus=gpus or ["RTX 4090","RTX 5090"];gpu_list=", ".join(json.dumps(g) for g in gpus)
     n_clause=(f"num_gpus={exact_gpus}" if exact_gpus is not None else
              f"num_gpus>={max(1,min_gpus)}" + (f" num_gpus<={max_gpus}" if max_gpus else ""))
-    query=f"rentable=true rented=any verified=any external=any {n_clause} reliability>={min_reliability} direct_port_count>=1 cpu_cores_effective>={min_cpus} disk_space>={min_disk} duration>={min_duration} gpu_name in [{gpu_list}]"
+    _ver = "true" if verified_only else "any"
+    _cuda = f" cuda_vers>={min_cuda}" if min_cuda else ""
+    query=f"rentable=true rented=any verified={_ver} external=any{_cuda} {n_clause} reliability>={min_reliability} direct_port_count>=1 cpu_cores_effective>={min_cpus} disk_space>={min_disk} duration>={min_duration} gpu_name in [{gpu_list}]"
     if max_price is not None:query+=f" dph<={max_price}"
     # --type on-demand is PINNED: on-demand rentals give exclusive, non-
     # preemptible control of the GPU for the life of the instance. There is
@@ -441,11 +443,14 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
         # A host whose driver is older than the image's CUDA cannot start the
         # container at all ("nvidia-container-cli: initialization error" or a
         # shim failure). Filter it out rather than discover it at boot.
+        # NB: some vastai builds omit cuda_vers/verified from the payload. Only
+        # exclude on a KNOWN-bad value; the query above does the real filtering,
+        # otherwise a missing field would silently drop every offer.
         if min_cuda is not None and row.get("cuda_vers") and row["cuda_vers"]<min_cuda:continue
         if blacklist and row.get("machine_id") in blacklist:continue
         # Vast-verified hosts are datacentre-checked; unverified ones are where
         # most boot failures live, so this is worth having as one flag.
-        if verified_only and row.get("verified") is not True:continue
+        if verified_only and row.get("verified") is False:continue
         if max_price_per_gpu is not None and row["price_per_gpu"]>max_price_per_gpu:continue
         rows.append(row)
     rows.sort(key=lambda r:(-(r["st_score"] or 0),-r["gpu_score"],r["price_per_gpu"],
