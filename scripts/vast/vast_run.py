@@ -274,6 +274,7 @@ def choose_auto(args: argparse.Namespace) -> dict[str, Any]:
         min_cpus=args.min_cpus,
         min_disk=args.disk,
         exact_gpus=(None if args.num_gpus in (0, None) else args.num_gpus),
+        verified_only=args.verified_only,
         min_cpus_per_gpu=args.min_cpus_per_gpu,
         min_duration=args.min_duration,
         allowed_tiers=tiers,
@@ -762,7 +763,8 @@ def create_instance(args, offer, root: Path, github: str, wandb: str, repo: str,
             "max_ppg": float(args.max_price_per_gpu),
             "image": image, "disk": int(args.disk),
             "num_gpus": args.num_gpus, "min_cpus_per_gpu": args.min_cpus_per_gpu,
-            "min_cuda": args.min_cuda, "repo": repo, "branch": branch,
+            "min_cuda": args.min_cuda, "verified_only": bool(args.verified_only),
+            "repo": repo, "branch": branch,
             "gpu": list(args.gpu) or None, "min_reliability": args.min_reliability,
             "min_duration": args.min_duration,
         },
@@ -960,7 +962,8 @@ def relaunch_after_abort(root: Path, state_path: Path, state: dict,
                 min_duration=rl.get("min_duration", 1.0), limit=1000,
                 exact_gpus=(rl.get("num_gpus") or None),
                 min_cpus_per_gpu=rl.get("min_cpus_per_gpu", 8.0),
-                min_cuda=rl.get("min_cuda"))
+                min_cuda=rl.get("min_cuda"),
+                verified_only=bool(rl.get("verified_only")))
     offer = pick_offer_ladder(root, base, float(rl.get("max_ppg", 0.70)))
     if offer is None:
         log("RETRY_FAILED", "no eligible A/B/C offer under the price cap")
@@ -1114,7 +1117,17 @@ def resolve_resume_path(root: Path, target: str) -> Path:
         if target in {state.get("run_name"), state.get("run_script"), state.get("session"), path.stem}:
             matches.append(path)
     if not matches:
-        raise SystemExit(f"No tracked active run matches {target!r}.")
+        tracked = [p.stem for p in sorted(active_dir(root).glob("*.json"))]
+        hist = root / ".vast" / "run_history.log"
+        last = ""
+        if hist.is_file():
+            lines = [l for l in hist.read_text().splitlines() if l.strip()]
+            if lines:
+                last = f"\n  last finished run: {lines[-1][:120]}"
+        raise SystemExit(
+            f"No tracked active run matches {target!r}.\n"
+            f"  currently tracked: {tracked or 'none -- every run has finished and cleaned up'}"
+            f"{last}")
     if len(matches) > 1:
         raise SystemExit(f"Multiple active runs match {target!r}: {[p.stem for p in matches]}")
     return matches[0]
@@ -1150,6 +1163,9 @@ def main() -> None:
                          "replacement, up to this many times (0 disables).")
     ap.add_argument("--max-price-per-gpu", type=float, default=0.70,
                     help="Price cap used when auto-picking a replacement box.")
+    ap.add_argument("--verified-only", action="store_true",
+                    help="Only rent Vast-verified hosts (fewer boot failures, "
+                         "slightly higher prices).")
     ap.add_argument("--min-cuda", type=float, default=None,
                     help="Minimum host CUDA version; match your image (e.g. 13.0).")
     ap.add_argument("--startup-deadline", type=int, default=1800,

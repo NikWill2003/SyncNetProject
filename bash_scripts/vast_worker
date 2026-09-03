@@ -29,20 +29,38 @@ exec >>"$BOOTSTRAP_LOG" 2>&1
 status "WORKER_START $RUN_SCRIPT"
 cd "$WORKDIR"
 
-# Some images ship python3 only. Every campaign calls `python`, so make one
-# available on PATH rather than patching each script (exit 127 otherwise).
-if ! command -v python >/dev/null 2>&1; then
-  if command -v python3 >/dev/null 2>&1; then
-    mkdir -p /workspace/bin
-    ln -sf "$(command -v python3)" /workspace/bin/python
-    export PATH="/workspace/bin:$PATH"
-    status "SHIM python -> $(command -v python3)"
-  else
-    status "FAILED no python or python3 on PATH"
-    touch /workspace/RUN_FAILED
-    exit 127
+# Pick the interpreter that ALREADY HAS TORCH. Vast/pytorch images install
+# torch into a virtualenv (/venv/main) or conda env (/opt/conda), NOT into
+# /usr/bin/python3 -- shimming to the system python makes a torch-equipped
+# image look torch-less and triggers a pointless ~2.5 GB download.
+PY=""
+for cand in \
+    "${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/python}" \
+    /venv/main/bin/python \
+    /opt/conda/bin/python \
+    /usr/local/bin/python \
+    "$(command -v python 2>/dev/null)" \
+    "$(command -v python3 2>/dev/null)"; do
+  [ -n "$cand" ] && [ -x "$cand" ] || continue
+  if "$cand" -c "import torch" >/dev/null 2>&1; then
+    PY="$cand"; status "PYTHON with torch: $PY"; break
   fi
+  [ -z "$PY" ] && PY_FALLBACK="$cand"
+done
+if [ -z "$PY" ]; then
+  PY="${PY_FALLBACK:-$(command -v python3 2>/dev/null)}"
+  status "PYTHON no interpreter has torch; using $PY"
 fi
+if [ -z "$PY" ]; then
+  status "FAILED no python or python3 on PATH"
+  touch /workspace/RUN_FAILED
+  exit 127
+fi
+# Every campaign calls `python`; point it at the chosen interpreter.
+mkdir -p /workspace/bin
+ln -sf "$PY" /workspace/bin/python
+export PATH="/workspace/bin:$PATH"
+status "SHIM python -> $PY"
 status "PYTHON $(python -V 2>&1) at $(command -v python)"
 
 status "INSTALLING requirements.txt"
@@ -88,8 +106,11 @@ fi
 # wrapper/shim that does not propagate it (a common way to lose it: running
 # python instead of exec'ing it, or doing anything after), EVERY run reports
 # ok and a whole campaign of failures looks green. Prove it end-to-end.
-python -c "import sys; sys.exit(3)" >/dev/null 2>&1
-_shim_rc=$?
+# NOTE: this deliberately exits non-zero, so it MUST run inside a && / ||
+# list -- a bare command would trip `trap fail_worker ERR` and kill the
+# worker with the very code we are testing for.
+_shim_rc=0
+python -c "import sys; sys.exit(3)" >/dev/null 2>&1 || _shim_rc=$?
 if [ "$_shim_rc" -ne 3 ]; then
   status "FATAL python does not propagate exit codes (got $_shim_rc, expected 3)"
   status "FAILED refusing to run: ok/FAIL results would be meaningless"
