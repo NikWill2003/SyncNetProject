@@ -28,7 +28,10 @@ RUNS=(
   "smoke_canonical    task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/canonical    train.seed=0 $SMALL $FAST wandb.tags=[v16,smoke]"
   "smoke_hybrid       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_hybrid train.seed=0 $SMALL $FAST wandb.tags=[v16,smoke]"
   "smoke_baseline     task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/film     train.seed=0 $SMALL $FAST wandb.tags=[v16,smoke]"
-  "smoke_mustfail     task=sort_of_clevr experiment=sort_of_clevr/sync/thesis/NO_SUCH_CELL train.seed=0"
+  # NOTE: a bad experiment= is NOT a failure -- hydra treats the experiment
+  # group as optional and silently composes the DEFAULT config instead
+  # (verified: it trains busnet). Use a bad task, which really does raise.
+  "smoke_mustfail     task=NO_SUCH_TASK train.seed=0"
 )
 
 source bash_scripts/_campaign_lib.sh
