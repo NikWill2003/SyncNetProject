@@ -28,7 +28,7 @@ def get_ssh(instance_id: int) -> tuple[str, str, int]:
 
 def ssh_base(user: str, host: str, port: int) -> list[str]:
     return [
-        "ssh", "-q", "-o", "LogLevel=ERROR",
+        "ssh", "-q", "-o", "LogLevel=ERROR", "-o", "ClearAllForwardings=yes",
         "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=8",
         "-p", str(port), f"{user}@{host}",
     ]
@@ -64,6 +64,7 @@ def rsync_path(user: str, host: str, port: int, remote: str, local: Path, direct
     # -q + LogLevel=ERROR suppress the host's MOTD/banner, which otherwise
     # prints on every single rsync (7x per sync here).
     transport = (f"ssh -p {port} -q -o LogLevel=ERROR "
+                 f"-o ClearAllForwardings=yes "
                  f"-o StrictHostKeyChecking=accept-new")
     source = f"{user}@{host}:{remote}"
     destination = str(local) + ("/" if directory else "")
