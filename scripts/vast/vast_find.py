@@ -418,9 +418,14 @@ def search_offers(*,gpus=None,max_price=None,min_reliability=0.99,min_cpus=8,min
     items=[]
     for g in gpus:
         q=query.replace(f"gpu_name in [{gpu_list}]",f'gpu_name="{g}"')
-        items+=unwrap_offers(run_json(["vastai","search","offers","-n",q,
-                                       "--type","on-demand","--order","dph",
-                                       "--limit",str(limit),"--raw"]))
+        got=unwrap_offers(run_json(["vastai","search","offers","-n",q,
+                                    "--type","on-demand","--order","dph",
+                                    "--limit",str(limit),"--raw"]))
+        if len(got)>=limit:
+            # ordered by TOTAL $/h, so the rows cut are the multi-GPU boxes
+            print(f"WARNING: {g}: server-side limit ({limit}) reached -- the search is "
+                  f"NOT exhaustive; multi-GPU boxes are cut first. Raise --limit.")
+        items+=got
     dedup={}
     for it in items:
         dedup[it.get("id") or it.get("ask_contract_id") or id(it)]=it

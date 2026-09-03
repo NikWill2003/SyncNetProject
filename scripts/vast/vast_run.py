@@ -1184,8 +1184,8 @@ def main() -> None:
     ap.add_argument("--min-cpus", type=float, default=8)
     ap.add_argument("--min-duration", type=float, default=1.0)
     ap.add_argument("--tiers", default="A,B,C")
-    ap.add_argument("--search-limit", type=int, default=100)
-    ap.add_argument("--top", type=int, default=20)
+    ap.add_argument("--search-limit", type=int, default=1000)
+    ap.add_argument("--top", type=int, default=40)
     ap.add_argument("--yes", action="store_true")
     ap.add_argument("--resume", metavar="RUN", help="Resume tracking one active run by script/run/session name")
     ap.add_argument("--destroy", metavar="NAME|ID",
