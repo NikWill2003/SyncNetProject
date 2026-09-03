@@ -21,6 +21,15 @@ from vast_find import lookup_offer, print_candidate, print_table, search_offers
 from vast_sync_outputs import sync_instance
 
 DEFAULT_IMAGE = "vastai/pytorch:cuda-12.8.1-auto"
+
+# Bumped whenever runner behaviour changes, so `--version` can prove which
+# code is actually running (the box clones the repo; your local copy may lag).
+RUNNER_VERSION = "2026-09-03.1"
+RUNNER_FEATURES = (
+    "direct-ssh-endpoint", "verified-destroy", "startup-watchdog",
+    "fatal-boot-detection", "machine-blacklist", "auto-retry-tier-ladder",
+    "periodic-sync", "quiet-ssh", "multi-gpu-any-count",
+)
 DEFAULT_REPO = "https://github.com/NikWill2003/SyncNetProject.git"
 DEFAULT_BRANCH = "main"
 REMOTE_WORKDIR = "/workspace/SyncNetProject"
@@ -324,9 +333,15 @@ def get_ssh_direct(instance_id: int) -> tuple[str, str, int] | None:
             port = mapping[0].get("HostPort") or mapping[0].get("hostport")
     if port is None:
         port = data.get("direct_port_start")
-    if not host or not port:
+    if not host or port in (None, ""):
         return None
-    return "root", str(host).strip(), int(port)
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return None
+    if port <= 0:            # -1 means "not mapped yet" while the box boots
+        return None
+    return "root", str(host).strip(), port
 
 
 # Host-side failures that no amount of waiting will fix. Seen in the wild:
@@ -1135,9 +1150,18 @@ def main() -> None:
     ap.add_argument("--destroy", metavar="NAME|ID",
                     help="Destroy an instance (campaign name or raw id), verify it is "
                          "gone, and clear local tracking.")
+    ap.add_argument("--version", action="store_true",
+                    help="Print the runner version + enabled features and exit.")
     ap.add_argument("--resume-all", action="store_true", help="Restore tracking for every .vast/active run")
     ap.add_argument("--_track-state", help=argparse.SUPPRESS)
     args = ap.parse_args()
+
+    if args.version:
+        print(f"vast_run.py {RUNNER_VERSION}")
+        for f in RUNNER_FEATURES:
+            print(f"  + {f}")
+        return
+
 
     root = Path(args.project_root).resolve()
     for tool in ("vastai", "ssh", "rsync", "tmux"):
