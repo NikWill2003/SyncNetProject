@@ -886,9 +886,6 @@ def main() -> None:
                     help="Rent a box with exactly this many GPUs; the campaign "
                          "runs one independent experiment per GPU from a shared queue.")
     ap.add_argument("--min-cpus-per-gpu", type=float, default=8.0)
-    ap.add_argument("--destroy", metavar="CAMPAIGN",
-                    help="Sync results, destroy the instance, and remove local "
-                         "tracking state + tmux session for this campaign.")
     ap.add_argument("--force", action="store_true",
                     help="With --destroy: destroy even if the sync fails.")
     ap.add_argument("--no-sync", action="store_true",
@@ -927,34 +924,29 @@ def main() -> None:
         resume_all(root)
         return
     if args.destroy:
-        # Manual cleanup: destroy an instance (by campaign name or raw id) and
-        # clear any local tracking for it. For when a controller died mid-run.
+        # Sync results, destroy, verify, then clear local tracking.
+        # Accepts a campaign name (state file is cleaned up too) or a raw id.
         target = args.destroy
-        path = None
         try:
             iid = int(target)
         except ValueError:
-            path = resolve_resume_path(root, target)
-            iid = int(load_state(path)["instance_id"])
+            raise SystemExit(destroy_campaign(root, target,
+                                              force=args.force,
+                                              skip_sync=args.no_sync))
         print(f"Destroying instance {iid} ...")
         okgone = destroy_verified(iid)
         print("Destroyed and confirmed gone." if okgone else
               f"COULD NOT CONFIRM destruction of {iid} -- check the web UI; it may still bill.")
-        if path is None:
-            for cand in sorted(active_dir(root).glob("*.json")):
-                try:
-                    st = load_state(cand)
-                except Exception:
-                    continue
-                if int(st.get("instance_id", -1)) == iid:
-                    path = cand
-                    break
-        if path is not None and path.is_file():
-            cleanup_dead_state(root, path, load_state(path))
-        return
-    if args.destroy:
-        raise SystemExit(destroy_campaign(root, args.destroy,
-                                          force=args.force, skip_sync=args.no_sync))
+        # clear any local state that referenced this id
+        for cand in sorted(active_dir(root).glob("*.json")):
+            try:
+                st = load_state(cand)
+            except Exception:
+                continue
+            if int(st.get("instance_id", -1)) == iid:
+                cleanup_dead_state(root, cand, st)
+        raise SystemExit(0 if okgone else 1)
+
     if args.resume:
         path = resolve_resume_path(root, args.resume)
         state = load_state(path)
