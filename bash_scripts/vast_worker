@@ -84,6 +84,20 @@ if ! python -c "import torch" 2>/dev/null; then
     || status "WARNING torch install failed"
 fi
 
+# The ok/FAIL contract is only as good as the exit code. If `python` is a
+# wrapper/shim that does not propagate it (a common way to lose it: running
+# python instead of exec'ing it, or doing anything after), EVERY run reports
+# ok and a whole campaign of failures looks green. Prove it end-to-end.
+python -c "import sys; sys.exit(3)" >/dev/null 2>&1
+_shim_rc=$?
+if [ "$_shim_rc" -ne 3 ]; then
+  status "FATAL python does not propagate exit codes (got $_shim_rc, expected 3)"
+  status "FAILED refusing to run: ok/FAIL results would be meaningless"
+  touch /workspace/RUN_FAILED
+  exit 2
+fi
+status "EXITCODES ok (python propagates status)"
+
 status "VERIFYING GPU"
 python - <<'PYCODE'
 import os

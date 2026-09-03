@@ -24,11 +24,12 @@ DEFAULT_IMAGE = "vastai/pytorch:cuda-12.8.1-auto"
 
 # Bumped whenever runner behaviour changes, so `--version` can prove which
 # code is actually running (the box clones the repo; your local copy may lag).
-RUNNER_VERSION = "2026-09-03.1"
+RUNNER_VERSION = "2026-09-03.2"
 RUNNER_FEATURES = (
     "direct-ssh-endpoint", "verified-destroy", "startup-watchdog",
     "fatal-boot-detection", "machine-blacklist", "auto-retry-tier-ladder",
-    "periodic-sync", "quiet-ssh", "multi-gpu-any-count",
+    "periodic-sync", "quiet-ssh", "multi-gpu-any-count", "repo-content-preflight",
+    "destroy-prompt-answered",
 )
 DEFAULT_REPO = "https://github.com/NikWill2003/SyncNetProject.git"
 DEFAULT_BRANCH = "main"
@@ -220,7 +221,7 @@ def append_history(root: Path, status: str, script: str, offer: dict[str, Any], 
         f.write(line)
 
 
-def git_preflight(root: Path, branch: str) -> None:
+def git_preflight(root: Path, branch: str, run_script_rel: str | None = None) -> None:
     if not (root / ".git").exists():
         return
     problems: list[str] = []
@@ -237,6 +238,24 @@ def git_preflight(root: Path, branch: str) -> None:
             pass
     else:
         problems.append(f"could not verify origin/{branch}")
+    # Content check: the box runs whatever is in origin/<branch>. Comparing
+    # commits is not enough (wrong branch, unpushed work, a stale remote all
+    # look fine). Compare the ACTUAL bytes of the files that drive the run.
+    critical = ["bash_scripts/_campaign_lib.sh", "bash_scripts/vast_worker"]
+    if run_script_rel:
+        critical.insert(0, run_script_rel)
+    for rel in critical:
+        local = root / rel
+        if not local.is_file():
+            continue
+        shown = run(["git", "-C", str(root), "show", f"origin/{branch}:{rel}"],
+                    check=False)
+        if shown.returncode != 0:
+            problems.append(f"{rel} does not exist on origin/{branch}")
+        elif shown.stdout != local.read_text():
+            problems.append(f"{rel} DIFFERS from origin/{branch} "
+                            f"(the box would run the remote version)")
+
     if not problems:
         return
     print("\nWARNING: the Vast box clones the remote Git repo, not your local working tree.")
@@ -808,7 +827,13 @@ def destroy_verified(instance_id: int, attempts: int = 3) -> bool:
     here costs real money, so nothing is allowed to be swallowed."""
     for attempt in range(1, attempts + 1):
         try:
-            p = run(["vastai", "destroy", "instance", str(instance_id)], check=False)
+            # `vastai destroy instance` asks "[y/N]". In a non-interactive
+            # controller that read hits EOF and is treated as N -- the box
+            # survives while we log DESTROYING and move on. Answer it.
+            p = subprocess.run(
+                ["vastai", "destroy", "instance", str(instance_id)],
+                text=True, capture_output=True, input="y\n", timeout=120,
+            )
             out = ((p.stdout or "") + (p.stderr or "")).strip().replace("\n", " ")
             log("DESTROY_CMD", f"attempt {attempt}: rc={p.returncode} {out[:160]}")
         except Exception as e:
@@ -1241,7 +1266,7 @@ def main() -> None:
         if input(f"{args.run_script} already succeeded before. Run again? [y/N] ").strip().lower() not in {"y", "yes"}:
             raise SystemExit("Cancelled.")
 
-    git_preflight(root, branch)
+    git_preflight(root, branch, args.run_script)
     preflight_repo(repo, branch, github)
     auto_mode = args.offer.lower() == "auto"
     while True:
