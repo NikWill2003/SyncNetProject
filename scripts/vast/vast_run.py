@@ -723,6 +723,7 @@ def create_instance(args, offer, root: Path, github: str, wandb: str, repo: str,
         "WORKDIR": REMOTE_WORKDIR,
         "RUN_SCRIPT": args.run_script,
         "NGPU": (str(args.num_gpus) if args.num_gpus and args.num_gpus > 0 else "auto"),
+        "WORKERS_PER_GPU": str(max(1, args.workers_per_gpu)),
         "GITHUB_TOKEN": github,
         "WANDB_API_KEY": wandb,
     }
@@ -1163,6 +1164,10 @@ def main() -> None:
                          "replacement, up to this many times (0 disables).")
     ap.add_argument("--max-price-per-gpu", type=float, default=0.70,
                     help="Price cap used when auto-picking a replacement box.")
+    ap.add_argument("--workers-per-gpu", type=int, default=1,
+                    help="Run this many campaign workers on each GPU (small models "
+                         "leave a big GPU idle). Each worker holds its own dataset "
+                         "copy, so 2 needs a 32 GB card on sqoop.")
     ap.add_argument("--verified-only", action="store_true",
                     help="Only rent Vast-verified hosts (fewer boot failures, "
                          "slightly higher prices).")

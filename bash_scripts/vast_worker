@@ -166,7 +166,8 @@ elif [ "$NGPU" -ne "$DETECTED" ]; then
   NGPU="$DETECTED"
 fi
 export NGPU
-status "GPUS $NGPU (detected $DETECTED)"
+export WORKERS_PER_GPU="${WORKERS_PER_GPU:-1}"
+status "GPUS $NGPU (detected $DETECTED), workers/GPU $WORKERS_PER_GPU"
 status "RUNNING $RUN_SCRIPT"
 
 (

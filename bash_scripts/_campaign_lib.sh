@@ -34,21 +34,30 @@ run_campaign() {
         fi
     fi
 
+    # --- workers per GPU: small models leave a big GPU idle, so more than
+    #     one worker can share a device. Each worker is its own process with
+    #     its own copy of the gpu_cached dataset (~13 GB on sqoop), so 2/GPU
+    #     needs a 32 GB card. Set in the campaign or via the env: WORKERS_PER_GPU.
+    local wpg="${WORKERS_PER_GPU:-1}"
+    [ "${wpg:-1}" -ge 1 ] 2>/dev/null || wpg=1
+    local n_workers=$(( n_gpu * wpg ))
+    [ "$wpg" -gt 1 ] && echo "[campaign] $wpg workers per GPU -> $n_workers workers"
+
     # --- fair CPU split: N workers must not each claim every core ----
     local cores; cores=$(nproc 2>/dev/null || echo 8)
-    local threads=$(( cores / n_gpu )); [ "$threads" -lt 1 ] && threads=1
+    local threads=$(( cores / n_workers )); [ "$threads" -lt 1 ] && threads=1
     export OMP_NUM_THREADS="$threads" MKL_NUM_THREADS="$threads"
 
-    if [ "$n_gpu" -le 1 ]; then
+    if [ "$n_workers" -le 1 ]; then
         _campaign_worker 0 0 1
         return $?
     fi
 
     # --- shared queue: a claim file per run, taken atomically --------
     local qdir="$LOG/.queue"; rm -rf "$qdir"; mkdir -p "$qdir"
-    local g pids=()
-    for (( g = 0; g < n_gpu; g++ )); do
-        _campaign_worker "$g" "$g" "$n_gpu" &
+    local w pids=()
+    for (( w = 0; w < n_workers; w++ )); do
+        _campaign_worker "$(( w % n_gpu ))" "$w" "$n_workers" &
         pids+=($!)
         sleep "${STAGGER:-10}"
     done
