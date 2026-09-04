@@ -2,3 +2,7 @@
 # read_overlap / slot_coverage / anchor_R / bus_R) off the ordinary trace.
 - name: accuracy
 - name: sync_metrics
+- name: t_variance
+  t_values: [1, 2, 4, 6, 8, 12, 16]
+  n_repeats: 3
+  max_batches: 8

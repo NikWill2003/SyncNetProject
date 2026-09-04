@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'bash_scripts/final_sqoop_lr_control',
     'bash_scripts/final_sqoop_rhs01_ablations_b',
     'bash_scripts/final_sqoop_rhs01_ablations_a',
     'bash_scripts/explore_soc_baselines',

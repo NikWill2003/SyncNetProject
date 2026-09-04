@@ -164,7 +164,8 @@ class BusNet(nn.Module):
 
     # -- run: the bus loop and the readout --------------------------------
     def _run(self, X: Tensor, z_slots: Tensor | None, q_all: Tensor,
-             questions: Tensor, phase_override: str | None) -> tuple[Tensor, Tensor]:
+             questions: Tensor, phase_override: str | None,
+             t_override: int | None = None) -> tuple[Tensor, Tensor]:
         B = X.shape[0]
         h_slots, h_head = self.pathways.init_states(q_all, questions)
         h = torch.cat([self.identity.embed(h_slots), h_head], 1)
@@ -183,7 +184,9 @@ class BusNet(nn.Module):
             z = phase_shuffle(z, self.M)
 
         evolve = (self.cfg.addresses == 'computed' and phase_override not in ('freeze', 'zero'))
-        for _ in range(self.T):
+        # t_override: evaluate a trained model at a different number of internal
+        # steps (the test-time T ramp). None = the trained T.
+        for _ in range(self.T if t_override is None else int(t_override)):
             r = self.medium(h, z)
             inp = torch.cat([X, r], -1)
             h = self.identity.step(inp, h)
@@ -200,7 +203,7 @@ class BusNet(nn.Module):
 
     # -- forward ----------------------------------------------------------
     def forward(self, batch: VQABatch, phase_override: str | None = None,
-                **_: Any) -> VQAOutput:
+                t_override: int | None = None, **_: Any) -> VQAOutput:
         questions = self._encode_q(batch['questions'])
         squeeze = questions.dim() == 2
         if squeeze:
@@ -211,7 +214,7 @@ class BusNet(nn.Module):
                                         prior_perm=self._prior_perm(phase_override, batch))
         X = self.pathways.content_film(X, q_all)
         h, z = self._run(X, z_slots, q_all, questions,
-                         self._loop_override(phase_override))
+                         self._loop_override(phase_override), t_override=t_override)
 
         logits = self.readout(h[:, self.M:], questions)
         if squeeze:

@@ -1,7 +1,10 @@
-# v16 sync analysis bundle: accuracy + the intervention suite. t_variance
-# is deliberately omitted -- it sweeps `t_override`, which the v16 models
-# do not yet honour (they would silently ignore it and log flat curves);
-# add it back the day the forward takes T at test time.
+# v16 sync analysis bundle: accuracy, the intervention suite, the fixed-point
+# telemetry, and the test-time T ramp (runs once, at train end, on a capped
+# slice of the test set: t_values x n_repeats forwards).
 - name: accuracy
 - name: interventions
 - name: sync_metrics
+- name: t_variance
+  t_values: [1, 2, 4, 6, 8, 12, 16]
+  n_repeats: 3
+  max_batches: 8

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# final_sqoop_lr_control
+# DATASET: SQOOP rhs=1 and rhs=18 (two datasets)
+# 5 runs, ~8 GPU-h.
+# WHY: the token baselines only train at lr 1e-4 (the protocol is 3e-4). Their
+# rows are marked as such; this is the matching control -- the SyncNet at 1e-4
+# -- so the comparison cannot be read as the SyncNet getting the better rate.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_sqoop_lr_control
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  "sq1_syncnet_lr1e4_s0           task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false optim.lr=1e-4 dataset.rhs_variety=1 train.seed=0 train.num_workers=6 wandb.tags=[v16,final]"
+  "sq1_syncnet_lr1e4_s1           task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false optim.lr=1e-4 dataset.rhs_variety=1 train.seed=1 train.num_workers=6 wandb.tags=[v16,final]"
+  "sq1_syncnet_lr1e4_s2           task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false optim.lr=1e-4 dataset.rhs_variety=1 train.seed=2 train.num_workers=6 wandb.tags=[v16,final]"
+  "sq18_syncnet_lr1e4_s0          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false optim.lr=1e-4 dataset.rhs_variety=18 train.seed=0 train.num_workers=6 wandb.tags=[v16,final]"
+  "sq18_syncnet_lr1e4_s1          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false optim.lr=1e-4 dataset.rhs_variety=18 train.seed=1 train.num_workers=6 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

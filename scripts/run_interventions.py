@@ -71,6 +71,9 @@ def main() -> int:
     ap.add_argument('--glob', default=None, help="e.g. 'outputs/sqoop/**/best_model.pt'")
     ap.add_argument('--csv', default=None)
     ap.add_argument('--split', default='test', choices=['eval', 'test'])
+    ap.add_argument('--t-ramp', default=None, metavar='T,T,...',
+                    help="also evaluate at these internal step counts (test-time T ramp), "
+                         "e.g. 1,2,4,6,8,12,16")
     args = ap.parse_args()
 
     run_dirs = [Path(r) for r in args.runs]
@@ -100,6 +103,11 @@ def main() -> int:
             a = accuracy(model, loader, device, gate_override=g)
             row[f'gate_{g}_drop'] = round(base - a, 4)
             print(f'   gate  {g:14s} {a:.4f}   drop {base - a:+.4f}')
+        if args.t_ramp:
+            for t in [int(x) for x in args.t_ramp.split(',')]:
+                a = accuracy(model, loader, device, t_override=t)
+                row[f't_ramp_T{t}'] = round(a, 4)
+                print(f'   T={t:<3}               {a:.4f}   ({a - base:+.4f} vs trained T)')
         rows.append(row)
 
     if args.csv:

@@ -90,6 +90,7 @@ class GatedNet(nn.Module):
         return questions.float()
 
     def forward(self, batch: VQABatch, phase_override: str | None = None,
+                t_override: int | None = None,
                 gate_override: str | None = None, **_: Any) -> VQAOutput:
         questions = self._encode_q(batch['questions'])
         squeeze = questions.dim() == 2
@@ -115,7 +116,7 @@ class GatedNet(nn.Module):
             z = phase_shuffle(z, self.M)
 
         evolve = phase_override not in ('freeze', 'zero')
-        for _t in range(self.T):
+        for _t in range(self.T if t_override is None else int(t_override)):
             r = self.medium(h, z, gate_override=gate_override)
             h = self.identity.step(torch.cat([X, r], -1), h)
             if evolve:
