@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# explore_soc_baselines
+# DATASET: Sort-of-CLEVR
+# 21 runs, ~19 GPU-h.
+# WHY: the paper-form transformer (single patchify conv, 2 layers) sits at .839
+# on SoC and the workspace at .858 -- below FiLM (.936 / .955 on the shared stem)
+# and RelNet (.874), and below what these architectures are known to reach.
+# On SQOOP the same transformer went from .500 to 1.000 with the shared stem
+# and an effective batch of 2048. This applies the same two levers (plus depth)
+# on SoC, so the baselines in the main table are stem-matched to the SyncNet
+# and demonstrably tuned rather than merely present.
+# NOTE: grad_accum=8 is a protocol deviation (effective batch 2048 vs 256) and
+# must be marked in the table.
+#     local  : bash bash_scripts/explore_soc_baselines
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/explore_soc_baselines
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  # ---- transformer on the shared stem (field trunk): stem alone, + big batch, + depth ----
+  "soc_transformer_fe_s0                task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_s1                task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_s2                task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer train.seed=2 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_eb2048_s0         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_eb2048_s1         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_eb2048_s2         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer train.grad_accum=8 train.seed=2 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_L4_eb2048_s0      task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_L4_eb2048_s1      task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_L4_eb2048_s2      task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.grad_accum=8 train.seed=2 wandb.tags=[v16,explore_baselines]"
+  "soc_transformer_fe_L4_ffn4_eb2048_s0 task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 model.ffn_mult=4 train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  # ---- workspace on the shared stem: stem alone, + big batch ----
+  "soc_workspace_fe_s0                  task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_workspace_fe_s1                  task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "soc_workspace_fe_s2                  task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=2 wandb.tags=[v16,explore_baselines]"
+  "soc_workspace_fe_eb2048_s0           task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_workspace_fe_eb2048_s1           task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "soc_workspace_fe_eb2048_s2           task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.grad_accum=8 train.seed=2 wandb.tags=[v16,explore_baselines]"
+
+  # ---- RelNet: pairing resolution (SoC stem grid is coarser than SQOOP's; 5x5 vs 8x8) ----
+  "soc_relnet_ps8_s0                   task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/relnet model.pair_spatial=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_relnet_ps8_s1                   task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/relnet model.pair_spatial=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "soc_relnet_ps8_eb2048_s0            task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  # ---- Workspace: the bottleneck removed (top-k 1.0) and unlooped ----
+  "soc_workspace_fe_topk10_s0          task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace model.topk_frac=1.0 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "soc_workspace_fe_unlooped_s0        task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace model.share_layer_weights=false train.seed=0 wandb.tags=[v16,explore_baselines]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

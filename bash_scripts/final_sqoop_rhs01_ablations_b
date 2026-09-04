@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# final_sqoop_rhs01_ablations_b
+# DATASET: SQOOP rhs=1
+# 25 runs, all seeds 0-4 fresh (policy: a cell that is re-run is re-run in full).
+# WHY: SQOOP ablation table at the compositional extreme, part b -- medium + extras: silent, static addresses, lines + attention, with prior term, random seed
+# SUFFICIENT AS-IS (not in this script): the rhs=18 seed-justification block (random x2, scale sweep, zero init) -- a justification figure, small n is fine
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_sqoop_rhs01_ablations_b
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  # ---- silent ----
+  "sq1abl_silent_s0                   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=silent model.readout_prior=false dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,final]"
+  "sq1abl_silent_s1                   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=silent model.readout_prior=false dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,final]"
+  "sq1abl_silent_s2                   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=silent model.readout_prior=false dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,final]"
+  "sq1abl_silent_s3                   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=silent model.readout_prior=false dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,final]"
+  "sq1abl_silent_s4                   task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=silent model.readout_prior=false dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,final]"
+  # ---- static_addr ----
+  "sq1abl_static_addr_s0              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.addresses=static model.readout_prior=false dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,final]"
+  "sq1abl_static_addr_s1              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.addresses=static model.readout_prior=false dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,final]"
+  "sq1abl_static_addr_s2              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.addresses=static model.readout_prior=false dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,final]"
+  "sq1abl_static_addr_s3              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.addresses=static model.readout_prior=false dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,final]"
+  "sq1abl_static_addr_s4              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.addresses=static model.readout_prior=false dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,final]"
+  # ---- lines_attn ----
+  "sq1abl_lines_attn_s0               task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=lines model.gate=attn model.readout_prior=false dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,final]"
+  "sq1abl_lines_attn_s1               task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=lines model.gate=attn model.readout_prior=false dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,final]"
+  "sq1abl_lines_attn_s2               task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=lines model.gate=attn model.readout_prior=false dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,final]"
+  "sq1abl_lines_attn_s3               task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=lines model.gate=attn model.readout_prior=false dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,final]"
+  "sq1abl_lines_attn_s4               task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.medium=lines model.gate=attn model.readout_prior=false dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,final]"
+  # ---- with_prior_term ----
+  "sq1abl_with_prior_term_s0          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,final]"
+  "sq1abl_with_prior_term_s1          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,final]"
+  "sq1abl_with_prior_term_s2          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,final]"
+  "sq1abl_with_prior_term_s3          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,final]"
+  "sq1abl_with_prior_term_s4          task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,final]"
+  # ---- seed_random ----
+  "sq1abl_seed_random_s0              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.claim_prior_init=random model.readout_prior=false dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,final]"
+  "sq1abl_seed_random_s1              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.claim_prior_init=random model.readout_prior=false dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,final]"
+  "sq1abl_seed_random_s2              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.claim_prior_init=random model.readout_prior=false dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,final]"
+  "sq1abl_seed_random_s3              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.claim_prior_init=random model.readout_prior=false dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,final]"
+  "sq1abl_seed_random_s4              task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.claim_prior_init=random model.readout_prior=false dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
