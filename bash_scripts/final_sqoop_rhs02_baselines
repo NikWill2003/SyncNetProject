@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# final_sqoop_rhs02_baselines
+# DATASET: SQOOP rhs=2
+# 25 runs, all seeds 0-4 fresh.
+# WHY: SQOOP results table at this pair variety, BASELINES: FiLM and the tuned (shared stem, effective batch 2048) transformer and workspace. plus Conv+LSTM and RelNet to 5 seeds; Q-only stays at 3 (it is .500 by construction)
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_sqoop_rhs02_baselines
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=2"
+
+RUNS=(
+  # ---- film ----
+  "sq2_film_s0                        task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=2 train.seed=0 wandb.tags=[v16,final]"
+  "sq2_film_s1                        task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=2 train.seed=1 wandb.tags=[v16,final]"
+  "sq2_film_s2                        task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=2 train.seed=2 wandb.tags=[v16,final]"
+  "sq2_film_s3                        task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=2 train.seed=3 wandb.tags=[v16,final]"
+  "sq2_film_s4                        task=sqoop experiment=sqoop/baselines/thesis/film dataset.rhs_variety=2 train.seed=4 wandb.tags=[v16,final]"
+  # ---- transformer_tuned ----
+  "sq2_transformer_tuned_s0           task=sqoop experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 dataset.rhs_variety=2 train.seed=0 wandb.tags=[v16,final]"
+  "sq2_transformer_tuned_s1           task=sqoop experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 dataset.rhs_variety=2 train.seed=1 wandb.tags=[v16,final]"
+  "sq2_transformer_tuned_s2           task=sqoop experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 dataset.rhs_variety=2 train.seed=2 wandb.tags=[v16,final]"
+  "sq2_transformer_tuned_s3           task=sqoop experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 dataset.rhs_variety=2 train.seed=3 wandb.tags=[v16,final]"
+  "sq2_transformer_tuned_s4           task=sqoop experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 dataset.rhs_variety=2 train.seed=4 wandb.tags=[v16,final]"
+  # ---- workspace_tuned ----
+  "sq2_workspace_tuned_s0             task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.grad_accum=8 dataset.rhs_variety=2 train.seed=0 wandb.tags=[v16,final]"
+  "sq2_workspace_tuned_s1             task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.grad_accum=8 dataset.rhs_variety=2 train.seed=1 wandb.tags=[v16,final]"
+  "sq2_workspace_tuned_s2             task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.grad_accum=8 dataset.rhs_variety=2 train.seed=2 wandb.tags=[v16,final]"
+  "sq2_workspace_tuned_s3             task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.grad_accum=8 dataset.rhs_variety=2 train.seed=3 wandb.tags=[v16,final]"
+  "sq2_workspace_tuned_s4             task=sqoop experiment=sqoop/baselines/thesis/shared_workspace train.grad_accum=8 dataset.rhs_variety=2 train.seed=4 wandb.tags=[v16,final]"
+  # ---- conv_lstm (thesis-tier config; swap to the rescued variant if the remainder/diag runs find one) ----
+  "sq2_conv_lstm_s0                   task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=2 train.seed=0 wandb.tags=[v16,final]"
+  "sq2_conv_lstm_s1                   task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=2 train.seed=1 wandb.tags=[v16,final]"
+  "sq2_conv_lstm_s2                   task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=2 train.seed=2 wandb.tags=[v16,final]"
+  "sq2_conv_lstm_s3                   task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=2 train.seed=3 wandb.tags=[v16,final]"
+  "sq2_conv_lstm_s4                   task=sqoop experiment=sqoop/baselines/thesis/conv dataset.rhs_variety=2 train.seed=4 wandb.tags=[v16,final]"
+  # ---- relnet (thesis-tier config; swap to the rescued variant if the remainder/diag runs find one) ----
+  "sq2_relnet_s0                      task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=2 train.seed=0 wandb.tags=[v16,final]"
+  "sq2_relnet_s1                      task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=2 train.seed=1 wandb.tags=[v16,final]"
+  "sq2_relnet_s2                      task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=2 train.seed=2 wandb.tags=[v16,final]"
+  "sq2_relnet_s3                      task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=2 train.seed=3 wandb.tags=[v16,final]"
+  "sq2_relnet_s4                      task=sqoop experiment=sqoop/baselines/thesis/relnet dataset.rhs_variety=2 train.seed=4 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

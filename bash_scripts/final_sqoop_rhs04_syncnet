@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# final_sqoop_rhs04_syncnet
+# DATASET: SQOOP rhs=4
+# 5 runs, all seeds 0-4 fresh.
+# WHY: SQOOP results table at this pair variety, SYNCNET: the canonical model (no prior term), 5 fresh seeds
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_sqoop_rhs04_syncnet
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=4"
+
+RUNS=(
+  # ---- syncnet ----
+  "sq4_syncnet_s0                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=4 train.seed=0 wandb.tags=[v16,final]"
+  "sq4_syncnet_s1                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=4 train.seed=1 wandb.tags=[v16,final]"
+  "sq4_syncnet_s2                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=4 train.seed=2 wandb.tags=[v16,final]"
+  "sq4_syncnet_s3                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=4 train.seed=3 wandb.tags=[v16,final]"
+  "sq4_syncnet_s4                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=4 train.seed=4 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

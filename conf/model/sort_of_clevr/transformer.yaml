@@ -24,6 +24,4 @@ q_conditioning: token # token | broadcast_cat | film
 share_layer_weights: false # false -> normal transformer, true -> looped
 
 encoder:
-  name: patchify
-  ch: 128
-  patch_size: 5
+  name: field           # shared stem (the SyncNet field trunk); patchify kept as an ablation

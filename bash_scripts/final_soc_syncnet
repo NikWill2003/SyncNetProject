@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# final_soc_syncnet
+# DATASET: Sort-of-CLEVR
+# 10 runs, all seeds 0-4 fresh (policy: a cell that is re-run is re-run in full).
+# WHY: SoC SyncNet rows not yet at 5 fresh seeds: the two seed variants for the assembly-rate figure
+# SUFFICIENT AS-IS (not in this script): canonical x5, all eight ablation cells x5, the T/d/M sweeps x3, with-prior-term x6, cnn_stem x5 (running)
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_soc_syncnet
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  # ---- seed_partition ----
+  "socsn_seed_partition_s0            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=partition model.readout_prior=false train.seed=0 wandb.tags=[v16,final]"
+  "socsn_seed_partition_s1            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=partition model.readout_prior=false train.seed=1 wandb.tags=[v16,final]"
+  "socsn_seed_partition_s2            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=partition model.readout_prior=false train.seed=2 wandb.tags=[v16,final]"
+  "socsn_seed_partition_s3            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=partition model.readout_prior=false train.seed=3 wandb.tags=[v16,final]"
+  "socsn_seed_partition_s4            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=partition model.readout_prior=false train.seed=4 wandb.tags=[v16,final]"
+  # ---- seed_random ----
+  "socsn_seed_random_s0               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=random model.readout_prior=false train.seed=0 wandb.tags=[v16,final]"
+  "socsn_seed_random_s1               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=random model.readout_prior=false train.seed=1 wandb.tags=[v16,final]"
+  "socsn_seed_random_s2               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=random model.readout_prior=false train.seed=2 wandb.tags=[v16,final]"
+  "socsn_seed_random_s3               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=random model.readout_prior=false train.seed=3 wandb.tags=[v16,final]"
+  "socsn_seed_random_s4               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.claim_prior_init=random model.readout_prior=false train.seed=4 wandb.tags=[v16,final]"
+
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

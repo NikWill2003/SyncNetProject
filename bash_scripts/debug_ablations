@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# debug_ablations -- LOCAL wiring check for every ablation / sweep / seed cell.
+# Runs each cell through the debug trainer (conf/debug.yaml: tiny batch, no
+# compile, eval every 50 steps) for a handful of steps on small datasets, so a
+# broken code path shows up as a FAIL here rather than 40 GPU-hours into a
+# campaign. Interventions and telemetry run at every eval, so they are
+# exercised too. ~10-20 s per cell on a GPU; ~1 min on CPU.
+#     bash bash_scripts/debug_ablations            # all cells
+#     bash bash_scripts/debug_ablations sqoop      # one task
+#     STEPS=200 bash bash_scripts/debug_ablations  # longer, to see numbers move
+set -uo pipefail
+cd "$(dirname "$0")/.."
+ONLY="${1:-all}"
+STEPS="${STEPS:-6}"
+LOG="bash_scripts/logs/debug_ablations"; mkdir -p "$LOG"
+
+COMMON="--config-name debug train.n_steps=$STEPS train.train_bs=8 train.val_bs=64 train.mixed_precision=no logging.eval_log_interval=3 logging.train_log_interval=3 wandb.enabled=false hydra.mode=RUN"
+SOC="task=sort_of_clevr dataset.train_size=200 dataset.test_size=100 dataset.nb_questions=2"
+SQ="task=sqoop dataset.train_size=5184 dataset.test_size=5184 dataset.rhs_variety=1"
+
+CSOC="experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false"
+CSQ="experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false"
+
+declare -a CELLS=()
+if [ "$ONLY" != "sqoop" ]; then
+  CELLS+=(
+    "soc_canonical        $SOC $CSOC"
+    "soc_no_bias          $SOC $CSOC model.claim_prior=null"
+    "soc_hard_partition   $SOC $CSOC model.claim_prior_init=partition model.claim_prior_scale=50"
+    "soc_anchors_off      $SOC $CSOC model.per_module_anchors=false"
+    "soc_cells_off        $SOC $CSOC model.private_cells=false"
+    "soc_silent           $SOC $CSOC model.medium=silent"
+    "soc_static_addr      $SOC $CSOC model.addresses=static"
+    "soc_lines_attn       $SOC $CSOC model.medium=lines model.gate=attn"
+    "soc_cnn_stem         $SOC experiment=sort_of_clevr/sync/hybrids/identity_spatial_cnnenc model.readout_prior=false"
+    "soc_with_prior_term  $SOC experiment=sort_of_clevr/sync/hybrids/identity_spatial"
+    "soc_seed_partition   $SOC $CSOC model.claim_prior_init=partition"
+    "soc_seed_random      $SOC $CSOC model.claim_prior_init=random"
+    "soc_T2               $SOC $CSOC model.t_bus=2"
+    "soc_d2               $SOC $CSOC model.phase_dim=2"
+    "soc_M12              $SOC $CSOC model.n_modules=12"
+  )
+fi
+if [ "$ONLY" != "soc" ]; then
+  CELLS+=(
+    "sq1_canonical        $SQ $CSQ"
+    "sq1_no_bias          $SQ $CSQ model.claim_prior=null"
+    "sq1_hard_partition   $SQ $CSQ model.claim_prior_scale=50"
+    "sq1_anchors_off      $SQ $CSQ model.per_module_anchors=false"
+    "sq1_cells_off        $SQ $CSQ model.private_cells=false"
+    "sq1_silent           $SQ $CSQ model.medium=silent"
+    "sq1_static_addr      $SQ $CSQ model.addresses=static"
+    "sq1_lines_attn       $SQ $CSQ model.medium=lines model.gate=attn"
+    "sq1_with_prior_term  $SQ experiment=sqoop/sync/hybrids/identity_partition_cnnenc"
+    "sq1_seed_random      $SQ $CSQ model.claim_prior_init=random"
+    "sq1_T2               $SQ $CSQ model.t_bus=2"
+    "sq1_d2               $SQ $CSQ model.phase_dim=2"
+    "sq1_M12              $SQ $CSQ model.n_modules=12"
+    "sq1_transformer_tuned $SQ experiment=sqoop/matched/transformer_cnnenc train.grad_accum=2"
+    "sq1_workspace_tuned  $SQ experiment=sqoop/matched/shared_workspace_cnnenc train.grad_accum=2"
+  )
+fi
+
+pass=0; fail=0
+for spec in "${CELLS[@]}"; do
+  name="${spec%% *}"; args="${spec#* }"
+  if python -u -m scripts.main $COMMON $args > "$LOG/$name.log" 2>&1 \
+     && grep -q "Test  | Summary" "$LOG/$name.log"; then
+    acc=$(grep -o "callbacks/accuracy : [0-9.]*" "$LOG/$name.log" | tail -1 | awk '{print $3}')
+    iv=$(grep -o "interventions/phase_freeze_drop : [-0-9.]*" "$LOG/$name.log" | tail -1 | awk '{print $3}')
+    echo "ok   $name  acc=$acc${iv:+ freeze_drop=$iv}"; pass=$((pass+1))
+  else
+    echo "FAIL $name  ($LOG/$name.log)"; tail -3 "$LOG/$name.log" | sed 's/^/       /'; fail=$((fail+1))
+  fi
+done
+echo "---- $pass ok, $fail failed"
+[ "$fail" -eq 0 ]

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# explore_sqoop_rhs18_transformer
+# DATASET: SQOOP rhs=18 (one dataset)
+# 29 runs (2 seeds; 1 for single-purpose controls), ~35 GPU-h.
+# WHY: Transformer (shared stem): optimisation levers, question conditioning, width, depth, heads, dropout, warmup
+# Exploratory: find the configuration for this baseline BEFORE spending 5 seeds x 6
+# splits on it. Dataset held constant. See bash_scripts/BASELINE_CHANGES.md.
+# READ: the best config becomes this model's row in the final_* scripts; the
+# base row is what the shared stem alone does.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/explore_sqoop_rhs18_transformer
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=18"
+
+RUNS=(
+  "tf_base_s0                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_base_s1                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_eb2048_s0               task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_eb2048_s1               task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_lr1e4_s0                task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer optim.lr=1e-4 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_lr1e4_s1                task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer optim.lr=1e-4 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_wd0_s0                  task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer optim.weight_decay=0 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_wd0_s1                  task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer optim.weight_decay=0 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_eb2048_wd0_s0           task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 optim.weight_decay=0 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_eb2048_wd0_s1           task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 optim.weight_decay=0 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_L6_s0                   task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.n_layers=6 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_L6_s1                   task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.n_layers=6 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_eb2048_eqsamples_s0     task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_token_s0                task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.q_conditioning=token train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_token_s1                task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.q_conditioning=token train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_film_s0                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.q_conditioning=film train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_film_s1                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.q_conditioning=film train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_h256_s0                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.hidden_dim=256 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_h256_s1                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.hidden_dim=256 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_heads8_s0               task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.n_heads=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_heads8_s1               task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.n_heads=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_drop01_s0               task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.dropout=0.1 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_drop01_s1               task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.dropout=0.1 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_warm10k_s0              task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer optim.lr_scheduler_params.warmup_steps=10000 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_warm10k_s1              task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer optim.lr_scheduler_params.warmup_steps=10000 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_L6_eb2048_s0            task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.n_layers=6 train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_L6_eb2048_s1            task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.n_layers=6 train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "tf_h256_eb2048_s0          task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.hidden_dim=256 train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "tf_h256_eb2048_s1          task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/transformer model.hidden_dim=256 train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

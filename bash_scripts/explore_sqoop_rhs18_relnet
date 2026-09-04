@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# explore_sqoop_rhs18_relnet
+# DATASET: SQOOP rhs=18 (one dataset)
+# 19 runs (2 seeds; 1 for single-purpose controls), ~23 GPU-h.
+# WHY: RelNet: pairing resolution 5x5 / 8x8 / 16x16, then optimisation and capacity at 8x8
+# Exploratory: find the configuration for this baseline BEFORE spending 5 seeds x 6
+# splits on it. Dataset held constant. See bash_scripts/BASELINE_CHANGES.md.
+# READ: the best config becomes this model's row in the final_* scripts; the
+# base row is what the shared stem alone does.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/explore_sqoop_rhs18_relnet
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=18"
+
+RUNS=(
+  "rn_ps5_base_s0             task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps5_base_s1             task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_s0                  task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_s1                  task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps16_s0                 task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=16 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_s0           task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_s1           task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_wd0_s0              task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.weight_decay=0 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_wd0_s1              task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.weight_decay=0 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_lr1e4_s0            task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.lr=1e-4 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_lr1e4_s1            task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.lr=1e-4 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_g512_s0             task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 model.g_hidden_dim=512 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_g512_s1             task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 model.g_hidden_dim=512 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_f512_s0             task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 model.f_hidden_dim=512 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_f512_s1             task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 model.f_hidden_dim=512 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_wd0_s0       task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 optim.weight_decay=0 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_wd0_s1       task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 optim.weight_decay=0 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_warm10k_s0          task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.lr_scheduler_params.warmup_steps=10000 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_warm10k_s1          task=sqoop dataset.rhs_variety=18 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.lr_scheduler_params.warmup_steps=10000 train.seed=1 wandb.tags=[v16,explore_baselines]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

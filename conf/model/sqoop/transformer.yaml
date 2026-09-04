@@ -24,6 +24,5 @@ q_conditioning: broadcast_cat
 share_layer_weights: false
 
 encoder:
-  name: patchify
-  ch: 96
-  patch_size: 8
+  name: cnn             # shared 6-layer stem; patchify kept as an ablation
+  ch: 64

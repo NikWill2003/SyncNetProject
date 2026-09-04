@@ -16,7 +16,5 @@ q_encoder:
 mem_slots: 8
 
 encoder:
-  name: patchify
-  ch: 256
-  patch_size: 5
+  name: field           # shared stem (the SyncNet field trunk); patchify kept as an ablation
 n_layers: 4

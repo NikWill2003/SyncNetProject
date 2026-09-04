@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# final_soc_baselines
+# DATASET: Sort-of-CLEVR
+# 10 runs, all seeds 0-4 fresh (policy: a cell that is re-run is re-run in full).
+# WHY: SoC results table: the two baselines that were under-trained, re-run on the shared stem (transformer with depth), 5 fresh seeds
+# SUFFICIENT AS-IS (not in this script): Q-only, CNN+MLP, RelNet at 5 seeds; FiLM on the shared stem (film_fieldenc, .955) at 5 seeds
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_soc_baselines
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  # ---- transformer_stem_L4 ----
+  "soc_transformer_stem_L4_s0         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.seed=0 wandb.tags=[v16,final]"
+  "soc_transformer_stem_L4_s1         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.seed=1 wandb.tags=[v16,final]"
+  "soc_transformer_stem_L4_s2         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.seed=2 wandb.tags=[v16,final]"
+  "soc_transformer_stem_L4_s3         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.seed=3 wandb.tags=[v16,final]"
+  "soc_transformer_stem_L4_s4         task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/transformer model.n_layers=4 train.seed=4 wandb.tags=[v16,final]"
+  # ---- workspace_stem ----
+  "soc_workspace_stem_s0              task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=0 wandb.tags=[v16,final]"
+  "soc_workspace_stem_s1              task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=1 wandb.tags=[v16,final]"
+  "soc_workspace_stem_s2              task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=2 wandb.tags=[v16,final]"
+  "soc_workspace_stem_s3              task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=3 wandb.tags=[v16,final]"
+  "soc_workspace_stem_s4              task=sort_of_clevr experiment=sort_of_clevr/baselines/thesis/shared_workspace train.seed=4 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

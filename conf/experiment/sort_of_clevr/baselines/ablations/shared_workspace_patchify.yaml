@@ -1,0 +1,11 @@
+# @package _global_
+# Paper-form shared_workspace: a single patchify conv instead of the shared stem.
+# Reported in the appendix as the stem ablation for the token models.
+defaults:
+  - /experiment/sort_of_clevr/baselines/thesis/shared_workspace
+  - _self_
+model:
+  encoder:
+    name: patchify
+    ch: 256
+    patch_size: 5

@@ -2,6 +2,7 @@
 # run_sqoop_rhs01_bestofboth
 # DATASET: SQOOP rhs=1
 # 5 runs, ~8 GPU-h on one GPU.
+# CANONICAL readout (no question-only prior term), matching Chapter 3 and the ablation campaigns.
 # WHY: held-out pairs at maximum sparsity: the compositional number (gated .821, FiLM .692)
 #     local  : bash bash_scripts/run_sqoop_rhs01_bestofboth
 #     on vast: python scripts/vast/vast_run.py auto bash_scripts/run_sqoop_rhs01_bestofboth
@@ -14,11 +15,11 @@ mkdir -p "$LOG"
 PREP="task=sqoop dataset.rhs_variety=1"
 
 RUNS=(
-  "sq1_id_partition_cnn_s0      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
-  "sq1_id_partition_cnn_s1      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
-  "sq1_id_partition_cnn_s2      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,bestofboth]"
-  "sq1_id_partition_cnn_s3      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,bestofboth]"
-  "sq1_id_partition_cnn_s4      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s0      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s1      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s2      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s3      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,bestofboth]"
+  "sq1_id_partition_cnn_s4      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,bestofboth]"
 )
 
 source bash_scripts/_campaign_lib.sh
