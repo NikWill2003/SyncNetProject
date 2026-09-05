@@ -11,6 +11,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'bash_scripts/sweep_sqoop_rhs01_T8_s1',
+    'bash_scripts/sweep_sqoop_rhs01_T8_s0',
+    'bash_scripts/sweep_sqoop_rhs01_T4_s1',
+    'bash_scripts/sweep_sqoop_rhs01_T4_s0',
+    'bash_scripts/sweep_sqoop_rhs01_T2_s1',
+    'bash_scripts/sweep_sqoop_rhs01_T2_s0',
+    'bash_scripts/sweep_sqoop_rhs01_T16_s1',
+    'bash_scripts/sweep_sqoop_rhs01_T16_s0',
+    'bash_scripts/sweep_soc_T8_s1',
+    'bash_scripts/sweep_soc_T8_s0',
+    'bash_scripts/sweep_soc_T4_s1',
+    'bash_scripts/sweep_soc_T4_s0',
+    'bash_scripts/sweep_soc_T2_s1',
+    'bash_scripts/sweep_soc_T2_s0',
+    'bash_scripts/sweep_soc_T16_s1',
+    'bash_scripts/sweep_soc_T16_s0',
     'bash_scripts/m8_check_sqoop',
     'bash_scripts/m8_check_soc',
     'bash_scripts/m8_sqoop_rhs01_sweeps',

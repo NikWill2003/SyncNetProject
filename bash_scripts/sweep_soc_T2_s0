@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# sweep_soc_T2_s0
+# DATASET: Sort-of-CLEVR
+# 20 runs, ~20 GPU-h (one seed of the 4x5 M x d plane at T=2).
+# WHY: the M x d interaction. The medium's capacity argument predicts the d threshold
+# moves with M (about d >= (M+1)/2); the axis sweeps at M=6 cannot show that.
+# Split by task x T x seed: a lost box costs one seed of every cell, not every seed
+# of some cells. Launch order: T=8 (the plane at the canonical T), then 4, 2, 16.
+# Callbacks (from the sync_v16 bundle): accuracy, interventions, sync_metrics,
+# t_variance (test-time T ramp) -- all log to the wandb summary at train end.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/sweep_soc_T2_s0
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  "soc_T2_d6_M4_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=6 model.n_modules=4 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d6_M6_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=6 model.n_modules=6 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d6_M8_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=6 model.n_modules=8 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d6_M12_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=6 model.n_modules=12 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d2_M4_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=2 model.n_modules=4 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d2_M6_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=2 model.n_modules=6 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d2_M8_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=2 model.n_modules=8 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d2_M12_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=2 model.n_modules=12 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d3_M4_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=3 model.n_modules=4 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d3_M6_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=3 model.n_modules=6 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d3_M8_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=3 model.n_modules=8 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d3_M12_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=3 model.n_modules=12 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d4_M4_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=4 model.n_modules=4 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d4_M6_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=4 model.n_modules=6 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d4_M8_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=4 model.n_modules=8 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d4_M12_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=4 model.n_modules=12 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d8_M4_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=8 model.n_modules=4 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d8_M6_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=8 model.n_modules=6 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d8_M8_s0          task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=8 model.n_modules=8 train.seed=0 wandb.tags=[v16,grid]"
+  "soc_T2_d8_M12_s0         task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.t_bus=2 model.phase_dim=8 model.n_modules=12 train.seed=0 wandb.tags=[v16,grid]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

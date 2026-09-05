@@ -93,9 +93,10 @@ class sort_of_clevr_interventions_callback(BaseCallBack):
     def _evaluate(self, trainer: Trainer, **overrides) -> dict[str, float]:
         model = _unwrap(trainer.model)
         model.eval()
-        keys = ['all', 'non_relational', 'binary', 'ternary'] + list(C.SUBTYPE_NAMES.values())
-        correct = {k: 0 for k in keys}
-        total = {k: 0 for k in keys}
+        # Sort-of-CLEVR questions are one-hot vectors with family/subtype bits;
+        # any other task (SQOOP: token ids) gets the overall accuracy only.
+        correct: dict[str, int] = {'all': 0}
+        total: dict[str, int] = {'all': 0}
         for b_idx, batch in enumerate(iter(trainer.test_dataloader)):
             if self.max_batches and b_idx >= self.max_batches:
                 break
@@ -103,15 +104,20 @@ class sort_of_clevr_interventions_callback(BaseCallBack):
                         **overrides)
             hit = (out['logits'].argmax(-1) == batch['answers'])
             qs = batch['questions']
+            soc = torch.is_floating_point(qs) and qs.shape[-1] > C.SUB_Q_TYPE_IDX
             sels = {'all': torch.ones_like(hit)}
-            for fam, off in C.Q_TYPES_OFFSET.items():
-                sels[fam] = qs[:, C.Q_TYPE_IDX + off] == 1
-            for (fam, sub), sname in C.SUBTYPE_NAMES.items():
-                sels[sname] = sels[fam] & (qs[:, C.SUB_Q_TYPE_IDX + sub] == 1)
+            if soc:
+                for fam, off in C.Q_TYPES_OFFSET.items():
+                    sels[fam] = qs[:, C.Q_TYPE_IDX + off] == 1
+                for (fam, sub), sname in C.SUBTYPE_NAMES.items():
+                    sels[sname] = sels[fam] & (qs[:, C.SUB_Q_TYPE_IDX + sub] == 1)
             for key, sel in sels.items():
-                correct[key] += int(hit[sel].sum().item())
-                total[key] += int(sel.sum().item())
-        return {k: correct[k] / max(total[k], 1) for k in keys}
+                correct[key] = correct.get(key, 0) + int(hit[sel].sum().item())
+                total[key] = total.get(key, 0) + int(sel.sum().item())
+        out = {k: correct[k] / max(total[k], 1) for k in correct}
+        for k in ('non_relational', 'binary', 'ternary'):
+            out.setdefault(k, float('nan'))
+        return out
 
     def on_train_end(self, trainer: Trainer) -> None:
         try:

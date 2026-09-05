@@ -84,6 +84,7 @@ CALLBACKS: dict[str, CallbackSpec] = {
 try:
     from ...analysis import ANALYSIS_CALLBACKS
     CALLBACKS['t_variance'] = ANALYSIS_CALLBACKS['t_variance']
+    CALLBACKS['interventions'] = ANALYSIS_CALLBACKS['interventions']
     CALLBACKS['sync_metrics'] = ANALYSIS_CALLBACKS['sync_metrics']
 except Exception:
     pass

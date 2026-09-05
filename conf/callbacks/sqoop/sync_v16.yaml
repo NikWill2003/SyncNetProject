@@ -1,6 +1,7 @@
 # v16 sqoop sync bundle: accuracy + the fixed-point signature (field_R /
 # read_overlap / slot_coverage / anchor_R / bus_R) off the ordinary trace.
 - name: accuracy
+- name: interventions
 - name: sync_metrics
 - name: t_variance
   t_values: [1, 2, 4, 6, 8, 12, 16]
