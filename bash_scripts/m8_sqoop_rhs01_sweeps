@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# m8_sqoop_rhs01_sweeps
+# DATASET: SQOOP rhs=1
+# 21 runs, ~32 GPU-h.
+# WHY: the rhs=1 T and d sweep lines re-centred on M=8
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/m8_sqoop_rhs01_sweeps
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  # ---- T2 ----
+  "m8sq1sw_T2_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=2 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_T2_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=2 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_T2_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=2 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- T4 ----
+  "m8sq1sw_T4_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=4 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_T4_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=4 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_T4_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=4 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- T16 ----
+  "m8sq1sw_T16_s0                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=16 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_T16_s1                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=16 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_T16_s2                     task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.t_bus=16 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d2 ----
+  "m8sq1sw_d2_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=2 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_d2_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=2 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_d2_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=2 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d3 ----
+  "m8sq1sw_d3_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=3 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_d3_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=3 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_d3_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=3 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d4 ----
+  "m8sq1sw_d4_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=4 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_d4_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=4 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_d4_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=4 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d8 ----
+  "m8sq1sw_d8_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=8 train.seed=0 wandb.tags=[v16,m8]"
+  "m8sq1sw_d8_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=8 train.seed=1 wandb.tags=[v16,m8]"
+  "m8sq1sw_d8_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 model.phase_dim=8 train.seed=2 wandb.tags=[v16,m8]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# m8_check_soc
+# DATASET: Sort-of-CLEVR
+# 5 runs, ~6 GPU-h.
+# WHY: GATE for re-centring on M=8: the existing M=8 evidence is 3 seeds with s.d. 11. Five fresh seeds at each headline point; SoC: re-centre only if the five-seed mean clears 93.3 (M=6: 92.4 +- 0.9)
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/m8_check_soc
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  # ---- soc_m8 ----
+  "m8_soc_m8_s0                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=0 wandb.tags=[v16,m8]"
+  "m8_soc_m8_s1                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=1 wandb.tags=[v16,m8]"
+  "m8_soc_m8_s2                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=2 wandb.tags=[v16,m8]"
+  "m8_soc_m8_s3                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=3 wandb.tags=[v16,m8]"
+  "m8_soc_m8_s4                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=4 wandb.tags=[v16,m8]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

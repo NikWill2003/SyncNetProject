@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# final_sqoop_relnet_tuned
+# DATASET: SQOOP rhs=1 and rhs=18
+# 3 runs, ~13 h EACH (8x8 pairing = 4096 pairs per example, times grad_accum 8).
+# WHY: RelNet trains on SQOOP with 8x8 pairing and effective batch 2048 (.999 at
+# rhs=18, 3 of 4 seeds so far). A full 6-split curve at 5 seeds is ~400 GPU-h and
+# not affordable; this gives the row its compositional point (rhs=1, 2 seeds) and
+# a third in-distribution seed. Everything else on RelNet stays thesis-tier.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_sqoop_relnet_tuned
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  "sq1_relnet_tuned_s0            task=sqoop experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.num_workers=6 dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,final]"
+  "sq1_relnet_tuned_s1            task=sqoop experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.num_workers=6 dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,final]"
+  "sq18_relnet_tuned_s2           task=sqoop experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.num_workers=6 dataset.rhs_variety=18 train.seed=2 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

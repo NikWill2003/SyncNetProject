@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# m8_soc_syncnet
+# DATASET: Sort-of-CLEVR
+# 81 runs, ~81 GPU-h.
+# WHY: the whole SoC SyncNet side re-centred on M=8: canonical, ablations, appendix rows, seed variants, T and d sweeps (M sweep already spans 4-12)
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/m8_soc_syncnet
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  # ---- canonical ----
+  "m8soc_canonical_s0                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_canonical_s1                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_canonical_s2                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_canonical_s3                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_canonical_s4                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 train.seed=4 wandb.tags=[v16,m8]"
+  # ---- no_bias ----
+  "m8soc_no_bias_s0                   task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior=null train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_no_bias_s1                   task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior=null train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_no_bias_s2                   task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior=null train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_no_bias_s3                   task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior=null train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_no_bias_s4                   task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior=null train.seed=4 wandb.tags=[v16,m8]"
+  # ---- hard_partition_soc ----
+  "m8soc_hard_partition_soc_s0        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition model.claim_prior_scale=50 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_hard_partition_soc_s1        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition model.claim_prior_scale=50 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_hard_partition_soc_s2        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition model.claim_prior_scale=50 train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_hard_partition_soc_s3        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition model.claim_prior_scale=50 train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_hard_partition_soc_s4        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition model.claim_prior_scale=50 train.seed=4 wandb.tags=[v16,m8]"
+  # ---- anchors_off ----
+  "m8soc_anchors_off_s0               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.per_module_anchors=false train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_anchors_off_s1               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.per_module_anchors=false train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_anchors_off_s2               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.per_module_anchors=false train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_anchors_off_s3               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.per_module_anchors=false train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_anchors_off_s4               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.per_module_anchors=false train.seed=4 wandb.tags=[v16,m8]"
+  # ---- cells_off ----
+  "m8soc_cells_off_s0                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.private_cells=false train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_cells_off_s1                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.private_cells=false train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_cells_off_s2                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.private_cells=false train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_cells_off_s3                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.private_cells=false train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_cells_off_s4                 task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.private_cells=false train.seed=4 wandb.tags=[v16,m8]"
+  # ---- silent ----
+  "m8soc_silent_s0                    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=silent train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_silent_s1                    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=silent train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_silent_s2                    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=silent train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_silent_s3                    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=silent train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_silent_s4                    task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=silent train.seed=4 wandb.tags=[v16,m8]"
+  # ---- static_addr ----
+  "m8soc_static_addr_s0               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.addresses=static train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_static_addr_s1               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.addresses=static train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_static_addr_s2               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.addresses=static train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_static_addr_s3               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.addresses=static train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_static_addr_s4               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.addresses=static train.seed=4 wandb.tags=[v16,m8]"
+  # ---- lines_attn ----
+  "m8soc_lines_attn_s0                task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=lines model.gate=attn train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_lines_attn_s1                task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=lines model.gate=attn train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_lines_attn_s2                task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=lines model.gate=attn train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_lines_attn_s3                task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=lines model.gate=attn train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_lines_attn_s4                task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.medium=lines model.gate=attn train.seed=4 wandb.tags=[v16,m8]"
+  # ---- with_prior_term ----
+  "m8soc_with_prior_term_s0           task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.n_modules=8 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_with_prior_term_s1           task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.n_modules=8 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_with_prior_term_s2           task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.n_modules=8 train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_with_prior_term_s3           task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.n_modules=8 train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_with_prior_term_s4           task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.n_modules=8 train.seed=4 wandb.tags=[v16,m8]"
+  # ---- cnn_stem ----
+  "m8soc_cnn_stem_s0                  task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_cnnenc model.readout_prior=false model.n_modules=8 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_cnn_stem_s1                  task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_cnnenc model.readout_prior=false model.n_modules=8 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_cnn_stem_s2                  task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_cnnenc model.readout_prior=false model.n_modules=8 train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_cnn_stem_s3                  task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_cnnenc model.readout_prior=false model.n_modules=8 train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_cnn_stem_s4                  task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial_cnnenc model.readout_prior=false model.n_modules=8 train.seed=4 wandb.tags=[v16,m8]"
+  # ---- seed_partition ----
+  "m8soc_seed_partition_s0            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_seed_partition_s1            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_seed_partition_s2            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_seed_partition_s3            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_seed_partition_s4            task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=partition train.seed=4 wandb.tags=[v16,m8]"
+  # ---- seed_random ----
+  "m8soc_seed_random_s0               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=random train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_seed_random_s1               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=random train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_seed_random_s2               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=random train.seed=2 wandb.tags=[v16,m8]"
+  "m8soc_seed_random_s3               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=random train.seed=3 wandb.tags=[v16,m8]"
+  "m8soc_seed_random_s4               task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.claim_prior_init=random train.seed=4 wandb.tags=[v16,m8]"
+  # ---- T2 ----
+  "m8soc_T2_s0                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=2 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_T2_s1                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=2 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_T2_s2                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=2 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- T4 ----
+  "m8soc_T4_s0                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=4 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_T4_s1                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=4 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_T4_s2                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=4 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- T16 ----
+  "m8soc_T16_s0                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=16 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_T16_s1                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=16 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_T16_s2                       task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.t_bus=16 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d2 ----
+  "m8soc_d2_s0                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=2 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_d2_s1                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=2 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_d2_s2                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=2 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d3 ----
+  "m8soc_d3_s0                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=3 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_d3_s1                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=3 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_d3_s2                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=3 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d4 ----
+  "m8soc_d4_s0                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=4 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_d4_s1                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=4 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_d4_s2                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=4 train.seed=2 wandb.tags=[v16,m8]"
+  # ---- d8 ----
+  "m8soc_d8_s0                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=8 train.seed=0 wandb.tags=[v16,m8]"
+  "m8soc_d8_s1                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=8 train.seed=1 wandb.tags=[v16,m8]"
+  "m8soc_d8_s2                        task=sort_of_clevr experiment=sort_of_clevr/sync/hybrids/identity_spatial model.readout_prior=false model.n_modules=8 model.phase_dim=8 train.seed=2 wandb.tags=[v16,m8]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

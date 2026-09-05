@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# m8_check_sqoop
+# DATASET: SQOOP rhs=1 and 18
+# 8 runs, ~10 GPU-h.
+# WHY: GATE for re-centring on M=8: the existing M=8 evidence is 3 seeds with s.d. 11. Five fresh seeds at each headline point; SQOOP: re-centre only if the rhs=1 five-seed mean clears 77 (M=6: 70.0 +- 7.4, n=8); rhs=18 is a sanity check
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/m8_check_sqoop
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  # ---- sq1_m8 ----
+  "m8_sq1_m8_s0                       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 train.seed=0 wandb.tags=[v16,m8]"
+  "m8_sq1_m8_s1                       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 train.seed=1 wandb.tags=[v16,m8]"
+  "m8_sq1_m8_s2                       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 train.seed=2 wandb.tags=[v16,m8]"
+  "m8_sq1_m8_s3                       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 train.seed=3 wandb.tags=[v16,m8]"
+  "m8_sq1_m8_s4                       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=1 train.seed=4 wandb.tags=[v16,m8]"
+  # ---- sq18_m8 ----
+  "m8_sq18_m8_s0                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=18 train.seed=0 wandb.tags=[v16,m8]"
+  "m8_sq18_m8_s1                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=18 train.seed=1 wandb.tags=[v16,m8]"
+  "m8_sq18_m8_s2                      task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false model.n_modules=8 dataset.rhs_variety=18 train.seed=2 wandb.tags=[v16,m8]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

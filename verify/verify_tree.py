@@ -11,6 +11,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'bash_scripts/m8_check_sqoop',
+    'bash_scripts/m8_check_soc',
+    'bash_scripts/m8_sqoop_rhs01_sweeps',
+    'bash_scripts/m8_sqoop_rhs01_ablations',
+    'bash_scripts/m8_sqoop_curve',
+    'bash_scripts/m8_soc_syncnet',
+    'bash_scripts/final_sqoop_relnet_tuned',
     'bash_scripts/final_sqoop_lr_control',
     'bash_scripts/final_sqoop_rhs01_ablations_b',
     'bash_scripts/final_sqoop_rhs01_ablations_a',
