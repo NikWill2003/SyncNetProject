@@ -46,7 +46,7 @@ def build_components(cfg: Config) -> dict:
     model = build_model(cfg)
 
     if cfg.train.compile_model:
-        model.compile()
+        model.compile(mode='reduce-overhead')
 
     optimiser = build_optim(model, cfg.optim)
     scheduler = build_lr_scheduler(optimiser, cfg.train.n_steps, cfg.optim)
