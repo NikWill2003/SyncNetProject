@@ -11,6 +11,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'bash_scripts/final_sqoop_interventions',
+    'syncnet_canonical.py',
+    'syncnet_min.py',
     'conf/experiment/sort_of_clevr/matched/relnet_fieldenc.yaml',
     'bash_scripts/final_soc_relnet_stemB',
     'bash_scripts/final_sqoop_conv_curve',

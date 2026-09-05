@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# final_sqoop_interventions
+# DATASET: SQOOP rhs=1 (5 seeds) and rhs=18 (3 seeds)
+# 8 runs, ~12 GPU-h. dataloader mode (~2 GB on the card per run) so two workers share each GPU.
+# WHY: Table 5.3's SQOOP row. The trained canonical runs predate the interventions callback in
+# the SQOOP bundle and their checkpoints are not on hand, so the canonical is retrained with the
+# current bundle, which logs test_interventions/phase_{freeze,zero,shuffle}_drop,
+# anchor_shuffle_drop AND the test-time T ramp (t_variance/*) at train end. Same model, same
+# protocol: these seeds pool with the existing canonical cell in the registry.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_sqoop_interventions
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=1"
+
+RUNS=(
+  "sq1_canon_iv_s0        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.loader_mode=dataloader train.num_workers=4 train.seed=0 wandb.tags=[v16,final]"
+  "sq1_canon_iv_s1        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.loader_mode=dataloader train.num_workers=4 train.seed=1 wandb.tags=[v16,final]"
+  "sq1_canon_iv_s2        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.loader_mode=dataloader train.num_workers=4 train.seed=2 wandb.tags=[v16,final]"
+  "sq1_canon_iv_s3        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.loader_mode=dataloader train.num_workers=4 train.seed=3 wandb.tags=[v16,final]"
+  "sq1_canon_iv_s4        task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=1 train.loader_mode=dataloader train.num_workers=4 train.seed=4 wandb.tags=[v16,final]"
+  "sq18_canon_iv_s0       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=4 train.seed=0 wandb.tags=[v16,final]"
+  "sq18_canon_iv_s1       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=4 train.seed=1 wandb.tags=[v16,final]"
+  "sq18_canon_iv_s2       task=sqoop experiment=sqoop/sync/hybrids/identity_partition_cnnenc model.readout_prior=false dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=4 train.seed=2 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
