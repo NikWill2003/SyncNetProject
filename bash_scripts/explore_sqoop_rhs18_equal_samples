@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# explore_sqoop_rhs18_equal_samples
+# DATASET: SQOOP rhs=18
+# 12 runs, ~22 GPU-h (each run costs about one ordinary run, not eight).
+# WHY: RelNet trains at 8x8 pairing + effective batch 2048 (3 of 4 seeds at .999) and
+# Conv+LSTM moves (.695) under the same lever, but those runs take 12-13 h because
+# grad_accum=8 at 100k steps is 8x the compute. The transformer showed batch 2048 works
+# at EQUAL SAMPLES (12.5k steps). If that holds here, the full curves become affordable.
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/explore_sqoop_rhs18_equal_samples
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sqoop dataset.rhs_variety=18"
+
+RUNS=(
+  # ---- RelNet: does batch 2048 work at equal samples (as it did for the transformer)? ----
+  "rn_ps8_eb2048_eq_s0            task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_eq_s1            task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.n_steps=12500 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_wd0_eq_s0        task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.weight_decay=0 train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_wd0_eq_s1        task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 optim.weight_decay=0 train.grad_accum=8 train.n_steps=12500 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "rn_ps5_eb2048_eq_s0            task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/relnet train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "rn_ps8_eb2048_eq2x_s0          task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/relnet model.pair_spatial=8 train.grad_accum=8 train.n_steps=25000 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  # ---- Conv+LSTM: the same question, plus the levers that moved it ----
+  "cv_eb2048_lr1e4_eq_s0          task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/conv optim.lr=1e-4 train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "cv_eb2048_lr1e4_eq_s1          task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/conv optim.lr=1e-4 train.grad_accum=8 train.n_steps=12500 train.seed=1 wandb.tags=[v16,explore_baselines]"
+  "cv_eb2048_lr1e4_wd0_eq_s0      task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/conv optim.lr=1e-4 optim.weight_decay=0 train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "cv_eb4096_lr1e4_eq_s0          task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/conv optim.lr=1e-4 train.grad_accum=16 train.n_steps=6250 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "cv_eb2048_lr3e5_eq_s0          task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/conv optim.lr=3e-5 train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+  "cv_h512_eb2048_lr1e4_eq_s0     task=sqoop dataset.rhs_variety=18 train.loader_mode=dataloader train.num_workers=6 experiment=sqoop/baselines/thesis/conv model.hidden_dim=512 optim.lr=1e-4 train.grad_accum=8 train.n_steps=12500 train.seed=0 wandb.tags=[v16,explore_baselines]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign

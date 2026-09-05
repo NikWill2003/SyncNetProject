@@ -1,0 +1,10 @@
+# @package _global_
+# RelNet on the field trunk (stem B), so that every Sort-of-CLEVR model in the
+# main table sits on one stem. The pairing grid stays 5x5 (max-pooled from 19x19).
+defaults:
+  - /experiment/sort_of_clevr/matched/_family
+  - override /model: sort_of_clevr/relnet
+  - _self_
+model:
+  encoder:
+    name: field

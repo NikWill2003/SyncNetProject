@@ -11,6 +11,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 NEW = [
+    'conf/experiment/sort_of_clevr/matched/relnet_fieldenc.yaml',
+    'bash_scripts/final_soc_relnet_stemB',
+    'bash_scripts/final_sqoop_conv_curve',
+    'bash_scripts/final_sqoop_relnet_curve',
+    'bash_scripts/explore_sqoop_rhs18_equal_samples',
+    'syncnet.py',
     'bash_scripts/sweep_sqoop_rhs01_T8_s1',
     'bash_scripts/sweep_sqoop_rhs01_T8_s0',
     'bash_scripts/sweep_sqoop_rhs01_T4_s1',
@@ -33,7 +39,6 @@ NEW = [
     'bash_scripts/m8_sqoop_rhs01_ablations',
     'bash_scripts/m8_sqoop_curve',
     'bash_scripts/m8_soc_syncnet',
-    'bash_scripts/final_sqoop_relnet_tuned',
     'bash_scripts/final_sqoop_lr_control',
     'bash_scripts/final_sqoop_rhs01_ablations_b',
     'bash_scripts/final_sqoop_rhs01_ablations_a',

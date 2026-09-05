@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# final_soc_relnet_stemB
+# DATASET: Sort-of-CLEVR
+# 5 runs, ~5 GPU-h.
+# WHY: the last Sort-of-CLEVR cell not on the field trunk. With it, every model in
+# Table 5.1 shares one stem (FiLM and CNN+MLP on the trunk already exist at 5 seeds).
+#     on vast: python scripts/vast/vast_run.py auto bash_scripts/final_soc_relnet_stemB
+set -uo pipefail
+cd "$(dirname "$0")/.."
+CAMPAIGN="$(basename "$0")"
+LOG="bash_scripts/logs/$CAMPAIGN"
+mkdir -p "$LOG"
+
+PREP="task=sort_of_clevr"
+
+RUNS=(
+  "soc_relnet_stemB_s0    task=sort_of_clevr experiment=sort_of_clevr/matched/relnet_fieldenc train.seed=0 wandb.tags=[v16,final]"
+  "soc_relnet_stemB_s1    task=sort_of_clevr experiment=sort_of_clevr/matched/relnet_fieldenc train.seed=1 wandb.tags=[v16,final]"
+  "soc_relnet_stemB_s2    task=sort_of_clevr experiment=sort_of_clevr/matched/relnet_fieldenc train.seed=2 wandb.tags=[v16,final]"
+  "soc_relnet_stemB_s3    task=sort_of_clevr experiment=sort_of_clevr/matched/relnet_fieldenc train.seed=3 wandb.tags=[v16,final]"
+  "soc_relnet_stemB_s4    task=sort_of_clevr experiment=sort_of_clevr/matched/relnet_fieldenc train.seed=4 wandb.tags=[v16,final]"
+)
+
+source bash_scripts/_campaign_lib.sh
+run_campaign
